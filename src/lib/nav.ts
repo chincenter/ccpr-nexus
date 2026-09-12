@@ -26,10 +26,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "Programme Modules",
     items: [
-      { label: "Humanitarian", phase: 4 },
-      { label: "Landmine / Mine Action", phase: 4 },
-      { label: "Health", phase: 4 },
-      { label: "Governance", phase: 4 },
+      { label: "Humanitarian", href: "/humanitarian" },
+      { label: "Landmine / Mine Action", href: "/mine-action" },
+      { label: "Health", href: "/health" },
+      { label: "Governance", href: "/governance" },
     ],
   },
   {

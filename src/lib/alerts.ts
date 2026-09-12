@@ -13,35 +13,48 @@ export type Alert = { message: string; href: string; severity: "warning" | "crit
 export async function getManagementAlerts(supabase: SupabaseClient<Database>): Promise<Alert[]> {
   const alerts: Alert[] = [];
 
-  const [{ data: delayedActivities }, { data: overdueTasks }, { data: budgets }, { data: risks }, { data: indicators }] =
-    await Promise.all([
-      supabase
-        .from("activities")
-        .select("id, name, project_id, project:projects(id, name)")
-        .eq("status", "delayed")
-        .is("archived_at", null)
-        .limit(5),
-      supabase
-        .from("tasks")
-        .select("id, name, due_date, activity:activities(project_id)")
-        .lt("due_date", new Date().toISOString().slice(0, 10))
-        .neq("status", "completed")
-        .is("archived_at", null)
-        .limit(5),
-      supabase
-        .from("budgets")
-        .select("id, project_id, approved_budget, project:projects(name), budget_lines(amount, expenditures(amount))")
-        .is("archived_at", null),
-      supabase
-        .from("risks")
-        .select("id, title, likelihood, impact, project_id, programme_id")
-        .in("status", ["open", "mitigating"])
-        .is("archived_at", null),
-      supabase
-        .from("indicators")
-        .select("id, name, actual, target, project_id, programme_id")
-        .is("archived_at", null),
-    ]);
+  const [
+    { data: delayedActivities },
+    { data: overdueTasks },
+    { data: budgets },
+    { data: risks },
+    { data: indicators },
+    { data: overdueActions },
+  ] = await Promise.all([
+    supabase
+      .from("activities")
+      .select("id, name, project_id, project:projects(id, name)")
+      .eq("status", "delayed")
+      .is("archived_at", null)
+      .limit(5),
+    supabase
+      .from("tasks")
+      .select("id, name, due_date, activity:activities(project_id)")
+      .lt("due_date", new Date().toISOString().slice(0, 10))
+      .neq("status", "completed")
+      .is("archived_at", null)
+      .limit(5),
+    supabase
+      .from("budgets")
+      .select("id, project_id, approved_budget, project:projects(name), budget_lines(amount, expenditures(amount))")
+      .is("archived_at", null),
+    supabase
+      .from("risks")
+      .select("id, title, likelihood, impact, project_id, programme_id")
+      .in("status", ["open", "mitigating"])
+      .is("archived_at", null),
+    supabase
+      .from("indicators")
+      .select("id, name, actual, target, project_id, programme_id")
+      .is("archived_at", null),
+    supabase
+      .from("governance_actions")
+      .select("id, action_description, due_date")
+      .lt("due_date", new Date().toISOString().slice(0, 10))
+      .not("status", "in", "(completed,cancelled)")
+      .is("archived_at", null)
+      .limit(5),
+  ]);
 
   for (const a of delayedActivities ?? []) {
     const project = a.project as { id: string; name: string } | null;
@@ -95,6 +108,14 @@ export async function getManagementAlerts(supabase: SupabaseClient<Database>): P
         severity: "warning",
       });
     }
+  }
+
+  for (const a of overdueActions ?? []) {
+    alerts.push({
+      message: `Governance action "${a.action_description}" is overdue (due ${a.due_date}).`,
+      href: "/governance",
+      severity: "critical",
+    });
   }
 
   return alerts.slice(0, 12);

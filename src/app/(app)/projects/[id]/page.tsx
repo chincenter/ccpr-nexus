@@ -16,7 +16,7 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "*, programme:programmes(id, name, code), officer:staff!projects_project_officer_id_fkey(full_name)",
+      "*, programme:programmes(id, name, code, category), officer:staff!projects_project_officer_id_fkey(full_name)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -87,6 +87,15 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
   }
 
   const canEdit = !!staff && (OPERATIONAL_ROLES as readonly string[]).includes(staff.system_role);
+
+  const category = (project.programme as { category: string } | null)?.category;
+  const PROGRAMME_MODULE: Record<string, { label: string; href: string }> = {
+    humanitarian: { label: "Humanitarian", href: `/humanitarian/${project.id}` },
+    mine_action: { label: "Landmine / Mine Action", href: "/mine-action" },
+    health: { label: "Health", href: "/health" },
+    governance: { label: "Governance", href: "/governance" },
+  };
+  const programmeModule = category ? PROGRAMME_MODULE[category] : undefined;
 
   return (
     <div className="space-y-8">
@@ -267,6 +276,20 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
           Budget, expenditure, and commitments for this project — visible to Finance and management.
         </p>
       </div>
+
+      {programmeModule && (
+        <div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-slate-900">{programmeModule.label}</h2>
+            <Link href={programmeModule.href} className="text-sm font-medium text-teal-700 hover:underline">
+              Open module →
+            </Link>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">
+            Programme-specific records for this project — see the {programmeModule.label} page.
+          </p>
+        </div>
+      )}
 
       <div>
         <h2 className="text-base font-semibold text-slate-900">Documents</h2>

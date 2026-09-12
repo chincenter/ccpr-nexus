@@ -36,6 +36,23 @@ const STATUS_STYLES: Record<string, string> = {
   mitigating: "bg-blue-50 text-blue-700 ring-blue-600/20",
   monitoring: "bg-slate-100 text-slate-600 ring-slate-500/20",
   closed: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  // Phase 4: humanitarian / mine action / health / governance statuses
+  verified: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  cleared: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  resolved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  completed_referral: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  engaged: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  assisted: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  reported: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  under_verification: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  referred: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  planned: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  not_referred: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  not_engaged: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  not_assessed: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  inactive: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  ineligible: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  false_alarm: "bg-slate-100 text-slate-600 ring-slate-500/20",
 };
 
 function labelize(value: string) {
