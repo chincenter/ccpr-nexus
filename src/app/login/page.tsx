@@ -3,7 +3,7 @@ import { signIn } from "./actions";
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
   const next = typeof params.next === "string" ? params.next : "/";
-  const hasError = params.error === "1";
+  const errorMessage = typeof params.error === "string" ? params.error : null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
@@ -42,11 +42,15 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             />
           </div>
 
-          {hasError && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              Incorrect email or password. Please try again.
-            </p>
+          {errorMessage && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>
           )}
+
+          <div className="text-right">
+            <a href="/login/forgot-password" className="text-sm text-teal-700 hover:underline">
+              Forgot password?
+            </a>
+          </div>
 
           <button
             type="submit"

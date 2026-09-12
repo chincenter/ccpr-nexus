@@ -112,14 +112,19 @@ function SidebarFooter({ staffName, roleLabel }: { staffName: string; roleLabel:
     <div className="border-t border-slate-200 px-4 py-3">
       <p className="truncate text-sm font-medium text-slate-800">{staffName}</p>
       <p className="text-xs text-slate-500">{roleLabel}</p>
-      <form action="/auth/sign-out" method="post" className="mt-2">
-        <button
-          type="submit"
-          className="text-xs font-medium text-slate-500 hover:text-slate-800"
-        >
-          Sign out
-        </button>
-      </form>
+      <div className="mt-2 flex items-center gap-3">
+        <Link href="/account" className="text-xs font-medium text-slate-500 hover:text-slate-800">
+          Account
+        </Link>
+        <form action="/auth/sign-out" method="post">
+          <button
+            type="submit"
+            className="text-xs font-medium text-slate-500 hover:text-slate-800"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
