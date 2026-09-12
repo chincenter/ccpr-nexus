@@ -35,11 +35,11 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "Management",
     items: [
-      { label: "M&E / MEAL", phase: 3 },
-      { label: "Finance", phase: 3 },
+      { label: "M&E / MEAL", href: "/me-meal" },
+      { label: "Finance", href: "/finance" },
       { label: "GIS Map", phase: 5 },
       { label: "Risks & Security", href: "/risks" },
-      { label: "Reports", phase: 3 },
+      { label: "Reports", href: "/reports" },
       { label: "Documents", href: "/documents" },
       { label: "Locations", href: "/locations" },
     ],
@@ -52,7 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "My Work", href: "/my-work" },
       { label: "Users & Access", href: "/users" },
       { label: "Audit Log", href: "/audit-log" },
-      { label: "Data Management", phase: 3 },
+      { label: "Data Management", href: "/data" },
     ],
   },
 ];

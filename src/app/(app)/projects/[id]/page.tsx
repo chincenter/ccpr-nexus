@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff, OPERATIONAL_ROLES } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
-import { safePercent, riskRating } from "@/lib/calculations";
+import { safePercent, achievementLabel, riskRating } from "@/lib/calculations";
 import { ActivityCard } from "@/components/project/ActivityCard";
 import { DocumentUploader } from "@/components/documents/DocumentUploader";
 import { DocumentList } from "@/components/documents/DocumentList";
@@ -51,6 +52,12 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       .eq("entity_id", id)
       .is("archived_at", null),
   ]);
+
+  const { data: indicators } = await supabase
+    .from("indicators")
+    .select("*")
+    .eq("project_id", id)
+    .is("archived_at", null);
 
   const objectiveIds = (objectives ?? []).map((o) => o.id);
   const relevantOutcomes = (outcomes ?? []).filter((o) => objectiveIds.includes(o.objective_id));
@@ -222,6 +229,43 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
             <p className="text-sm text-slate-500">No risks recorded — add these from the Risks &amp; Security page.</p>
           )}
         </div>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">M&amp;E Indicators</h2>
+        <div className="mt-3 space-y-2">
+          {(indicators ?? []).map((indicator) => {
+            const pct = safePercent(indicator.actual, indicator.target);
+            return (
+              <div key={indicator.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                <div>
+                  <p className="font-medium text-slate-800">{indicator.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {indicator.actual ?? "—"} / {indicator.target ?? "—"} {indicator.unit ?? ""}
+                  </p>
+                </div>
+                <span className="text-xs font-medium text-slate-600">
+                  {pct != null ? `${pct}%` : "—"} · {achievementLabel(pct).replaceAll("_", " ")}
+                </span>
+              </div>
+            );
+          })}
+          {(indicators ?? []).length === 0 && (
+            <p className="text-sm text-slate-500">No indicators recorded — add these from the M&amp;E / MEAL page.</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Finance</h2>
+          <Link href={`/finance/${project.id}`} className="text-sm font-medium text-teal-700 hover:underline">
+            Open budget →
+          </Link>
+        </div>
+        <p className="mt-1 text-sm text-slate-500">
+          Budget, expenditure, and commitments for this project — visible to Finance and management.
+        </p>
       </div>
 
       <div>

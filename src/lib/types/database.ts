@@ -235,6 +235,192 @@ export type Database = {
           },
         ]
       }
+      budget_lines: {
+        Row: {
+          amount: number
+          archived_at: string | null
+          budget_id: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          line_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount?: number
+          archived_at?: string | null
+          budget_id: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          line_name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          archived_at?: string | null
+          budget_id?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          line_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_lines_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_lines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_lines_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budgets: {
+        Row: {
+          approved_budget: number
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          notes: string | null
+          project_id: string
+          revised_budget: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          approved_budget?: number
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          revised_budget?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          approved_budget?: number
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          revised_budget?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commitments: {
+        Row: {
+          amount: number
+          archived_at: string | null
+          budget_line_id: string
+          commitment_date: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          archived_at?: string | null
+          budget_line_id: string
+          commitment_date?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          archived_at?: string | null
+          budget_line_id?: string
+          commitment_date?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commitments_budget_line_id_fkey"
+            columns: ["budget_line_id"]
+            isOneToOne: false
+            referencedRelation: "budget_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           access_level: Database["public"]["Enums"]["document_access_level"]
@@ -294,6 +480,181 @@ export type Database = {
           },
           {
             foreignKeyName: "documents_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenditures: {
+        Row: {
+          amount: number
+          archived_at: string | null
+          budget_line_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expense_date: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          archived_at?: string | null
+          budget_line_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_date?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          archived_at?: string | null
+          budget_line_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_date?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenditures_budget_line_id_fkey"
+            columns: ["budget_line_id"]
+            isOneToOne: false
+            referencedRelation: "budget_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenditures_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenditures_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indicators: {
+        Row: {
+          actual: number | null
+          archived_at: string | null
+          baseline: number | null
+          created_at: string
+          created_by: string | null
+          data_source: string | null
+          definition: string | null
+          id: string
+          name: string
+          notes: string | null
+          programme_id: string | null
+          project_id: string | null
+          reporting_period: string | null
+          responsible_staff_id: string | null
+          result_id: string | null
+          result_type:
+            | Database["public"]["Enums"]["indicator_result_type"]
+            | null
+          target: number | null
+          unit: string | null
+          updated_at: string
+          updated_by: string | null
+          verification_status: Database["public"]["Enums"]["approval_status"]
+        }
+        Insert: {
+          actual?: number | null
+          archived_at?: string | null
+          baseline?: number | null
+          created_at?: string
+          created_by?: string | null
+          data_source?: string | null
+          definition?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          programme_id?: string | null
+          project_id?: string | null
+          reporting_period?: string | null
+          responsible_staff_id?: string | null
+          result_id?: string | null
+          result_type?:
+            | Database["public"]["Enums"]["indicator_result_type"]
+            | null
+          target?: number | null
+          unit?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          verification_status?: Database["public"]["Enums"]["approval_status"]
+        }
+        Update: {
+          actual?: number | null
+          archived_at?: string | null
+          baseline?: number | null
+          created_at?: string
+          created_by?: string | null
+          data_source?: string | null
+          definition?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          programme_id?: string | null
+          project_id?: string | null
+          reporting_period?: string | null
+          responsible_staff_id?: string | null
+          result_id?: string | null
+          result_type?:
+            | Database["public"]["Enums"]["indicator_result_type"]
+            | null
+          target?: number | null
+          unit?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          verification_status?: Database["public"]["Enums"]["approval_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicators_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicators_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicators_responsible_staff_id_fkey"
+            columns: ["responsible_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicators_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "staff"
@@ -1127,6 +1488,7 @@ export type Database = {
         | "field_duty"
         | "remote"
       document_access_level: "standard" | "restricted"
+      indicator_result_type: "objective" | "outcome" | "output"
       lifecycle_status:
         | "planning"
         | "active"

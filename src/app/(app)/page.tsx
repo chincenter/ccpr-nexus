@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { safePercent } from "@/lib/calculations";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
+import { getManagementAlerts } from "@/lib/alerts";
 
 const CATEGORY_LABELS: Record<string, string> = {
   humanitarian: "Humanitarian",
@@ -25,10 +26,11 @@ function Kpi({ label, value }: { label: string; value: string }) {
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: programmes }, { data: projects }, { data: activities }] = await Promise.all([
+  const [{ data: programmes }, { data: projects }, { data: activities }, alerts] = await Promise.all([
     supabase.from("programmes").select("*").is("archived_at", null),
     supabase.from("projects").select("*").is("archived_at", null),
     supabase.from("activities").select("id, project_id, status").is("archived_at", null),
+    getManagementAlerts(supabase),
   ]);
 
   const programmeList = programmes ?? [];
@@ -64,11 +66,6 @@ export default async function DashboardPage() {
     : { data: [] };
   const leadNameById = new Map((leads ?? []).map((s) => [s.id, s.full_name]));
 
-  const delayedOrDelayedRisk = projectList.filter((p) => {
-    const acts = activitiesByProject.get(p.id) ?? [];
-    return acts.some((a) => a.status === "delayed");
-  });
-
   return (
     <div className="space-y-8">
       <div>
@@ -90,16 +87,15 @@ export default async function DashboardPage() {
         <Kpi label="Activities Delayed" value={String(delayedActivities)} />
       </div>
 
-      {delayedOrDelayedRisk.length > 0 && (
+      {alerts.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm font-medium text-amber-900">Management alerts</p>
           <ul className="mt-2 list-inside list-disc text-sm text-amber-800">
-            {delayedOrDelayedRisk.map((p) => (
-              <li key={p.id}>
-                <Link href={`/projects/${p.id}`} className="underline">
-                  {p.name}
-                </Link>{" "}
-                has one or more delayed activities.
+            {alerts.map((alert, i) => (
+              <li key={i} className={alert.severity === "critical" ? "text-red-800" : undefined}>
+                <Link href={alert.href} className="underline">
+                  {alert.message}
+                </Link>
               </li>
             ))}
           </ul>

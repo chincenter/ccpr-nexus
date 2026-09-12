@@ -23,3 +23,19 @@ export function riskRating(likelihood: "low" | "medium" | "high", impact: "low" 
   if (score >= 2) return { label: "medium" as const, score };
   return { label: "low" as const, score };
 }
+
+/** Budget utilization = expenditure / approved budget x 100, safe against a zero/missing budget. */
+export function budgetUtilization(expenditure: number, approvedBudget: number): number | null {
+  return safePercent(expenditure, approvedBudget);
+}
+
+export function budgetRemaining(approvedBudget: number, expenditure: number, commitments: number): number {
+  return approvedBudget - expenditure - commitments;
+}
+
+export function utilizationSeverity(pct: number | null): "ok" | "warning" | "critical" {
+  if (pct == null) return "ok";
+  if (pct >= 100) return "critical";
+  if (pct >= 80) return "warning";
+  return "ok";
+}
