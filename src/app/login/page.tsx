@@ -59,6 +59,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             Sign in
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-slate-500">
+          New here?{" "}
+          <a href="/login/register" className="text-teal-700 hover:underline">
+            Create an account
+          </a>
+        </p>
       </div>
     </div>
   );
