@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff, OPERATIONAL_ROLES } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
-import { safePercent } from "@/lib/calculations";
+import { safePercent, riskRating } from "@/lib/calculations";
 import { ActivityCard } from "@/components/project/ActivityCard";
+import { DocumentUploader } from "@/components/documents/DocumentUploader";
+import { DocumentList } from "@/components/documents/DocumentList";
 
 export default async function ProjectDetailPage({ params }: PageProps<"/projects/[id]">) {
   const { id } = await params;
@@ -34,6 +36,21 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
         .order("start_date"),
       supabase.from("project_team").select("staff_id, role_on_project, staff(full_name, job_title)").eq("project_id", id),
     ]);
+
+  const [{ data: projectLocations }, { data: risks }, { data: documents }] = await Promise.all([
+    supabase.from("project_locations").select("location:locations(id, name, location_type)").eq("project_id", id),
+    supabase
+      .from("risks")
+      .select("*, responsible:staff!risks_responsible_staff_id_fkey(full_name)")
+      .eq("project_id", id)
+      .is("archived_at", null),
+    supabase
+      .from("documents")
+      .select("*, uploader:staff!documents_created_by_fkey(full_name)")
+      .eq("entity_type", "project")
+      .eq("entity_id", id)
+      .is("archived_at", null),
+  ]);
 
   const objectiveIds = (objectives ?? []).map((o) => o.id);
   const relevantOutcomes = (outcomes ?? []).filter((o) => objectiveIds.includes(o.objective_id));
@@ -163,6 +180,56 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
             </li>
           ))}
         </ul>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">Locations</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(projectLocations ?? []).map((pl) => {
+            const loc = pl.location as { id: string; name: string; location_type: string } | null;
+            return (
+              loc && (
+                <span key={loc.id} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
+                  {loc.name}
+                </span>
+              )
+            );
+          })}
+          {(projectLocations ?? []).length === 0 && (
+            <p className="text-sm text-slate-500">No locations linked yet — manage these from the Locations page.</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">Risks</h2>
+        <div className="mt-3 space-y-2">
+          {(risks ?? []).map((risk) => {
+            const rating = riskRating(risk.likelihood, risk.impact);
+            return (
+              <div key={risk.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                <div>
+                  <p className="font-medium text-slate-800">{risk.title}</p>
+                  <p className="text-xs text-slate-500">
+                    {risk.responsible?.full_name ?? "Unassigned"} · {rating.label} risk
+                  </p>
+                </div>
+                <StatusBadge status={risk.status} />
+              </div>
+            );
+          })}
+          {(risks ?? []).length === 0 && (
+            <p className="text-sm text-slate-500">No risks recorded — add these from the Risks &amp; Security page.</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">Documents</h2>
+        <div className="mt-3 space-y-3">
+          {canEdit && <DocumentUploader entityType="project" entityId={project.id} />}
+          <DocumentList documents={documents ?? []} canEdit={canEdit} />
+        </div>
       </div>
     </div>
   );

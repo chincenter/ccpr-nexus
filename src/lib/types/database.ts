@@ -127,6 +127,73 @@ export type Database = {
           },
         ]
       }
+      attendance: {
+        Row: {
+          check_in: string | null
+          check_out: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          remarks: string | null
+          staff_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+          updated_at: string
+          updated_by: string | null
+          work_location: string | null
+        }
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          remarks?: string | null
+          staff_id: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          updated_by?: string | null
+          work_location?: string | null
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          remarks?: string | null
+          staff_id?: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          updated_by?: string | null
+          work_location?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -168,8 +235,75 @@ export type Database = {
           },
         ]
       }
+      documents: {
+        Row: {
+          access_level: Database["public"]["Enums"]["document_access_level"]
+          archived_at: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          name: string
+          storage_path: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          access_level?: Database["public"]["Enums"]["document_access_level"]
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          name: string
+          storage_path: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          access_level?: Database["public"]["Enums"]["document_access_level"]
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          name?: string
+          storage_path?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
+          archived_at: string | null
           coordinates: unknown
           created_at: string
           created_by: string | null
@@ -187,6 +321,7 @@ export type Database = {
           village: string | null
         }
         Insert: {
+          archived_at?: string | null
           coordinates?: unknown
           created_at?: string
           created_by?: string | null
@@ -204,6 +339,7 @@ export type Database = {
           village?: string | null
         }
         Update: {
+          archived_at?: string | null
           coordinates?: unknown
           created_at?: string
           created_by?: string | null
@@ -700,6 +836,105 @@ export type Database = {
           },
         ]
       }
+      risks: {
+        Row: {
+          archived_at: string | null
+          category: Database["public"]["Enums"]["risk_category"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          impact: Database["public"]["Enums"]["risk_level"]
+          likelihood: Database["public"]["Enums"]["risk_level"]
+          mitigation: string | null
+          programme_id: string | null
+          project_id: string | null
+          responsible_staff_id: string | null
+          review_date: string | null
+          status: Database["public"]["Enums"]["risk_status"]
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: Database["public"]["Enums"]["risk_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          impact?: Database["public"]["Enums"]["risk_level"]
+          likelihood?: Database["public"]["Enums"]["risk_level"]
+          mitigation?: string | null
+          programme_id?: string | null
+          project_id?: string | null
+          responsible_staff_id?: string | null
+          review_date?: string | null
+          status?: Database["public"]["Enums"]["risk_status"]
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          category?: Database["public"]["Enums"]["risk_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          impact?: Database["public"]["Enums"]["risk_level"]
+          likelihood?: Database["public"]["Enums"]["risk_level"]
+          mitigation?: string | null
+          programme_id?: string | null
+          project_id?: string | null
+          responsible_staff_id?: string | null
+          review_date?: string | null
+          status?: Database["public"]["Enums"]["risk_status"]
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risks_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risks_responsible_staff_id_fkey"
+            columns: ["responsible_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risks_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           created_at: string
@@ -885,6 +1120,13 @@ export type Database = {
         | "under_review"
         | "approved"
         | "published"
+      attendance_status:
+        | "present"
+        | "leave"
+        | "absent"
+        | "field_duty"
+        | "remote"
+      document_access_level: "standard" | "restricted"
       lifecycle_status:
         | "planning"
         | "active"
@@ -906,6 +1148,16 @@ export type Database = {
         | "peacebuilding"
         | "research_policy"
         | "other"
+      risk_category:
+        | "operational"
+        | "financial"
+        | "security"
+        | "reputational"
+        | "programmatic"
+        | "compliance"
+        | "other"
+      risk_level: "low" | "medium" | "high"
+      risk_status: "open" | "mitigating" | "monitoring" | "closed"
       system_role:
         | "super_admin"
         | "executive"

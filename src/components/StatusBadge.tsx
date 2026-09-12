@@ -25,6 +25,17 @@ const STATUS_STYLES: Record<string, string> = {
   draft: "bg-blue-50 text-blue-700 ring-blue-600/20",
   // grey — not started
   not_started: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  // attendance
+  present: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  remote: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  field_duty: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  leave: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  absent: "bg-red-50 text-red-700 ring-red-600/20",
+  // risk status
+  open: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  mitigating: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  monitoring: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  closed: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
 };
 
 function labelize(value: string) {
