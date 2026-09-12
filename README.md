@@ -17,13 +17,14 @@ workspaces, and every report.
 - **Backend:** Supabase — PostgreSQL 17, Auth, Storage, Row Level Security, PostGIS
 - **Hosting:** Vercel (frontend), Supabase (database/auth/storage)
 
-## Project status: Phase 0 + Phase 1
+## Project status: Phase 0 + Phase 1 + Phase 2
 
-This repository currently implements the **foundation** and **core
-operations** phases:
+This repository currently implements the **foundation**, **core operations**,
+and **project management** phases:
 
-- Authentication (Supabase Auth, email/password) with a `staff` table
-  carrying the real access-control role — separate from job title
+- Authentication (Supabase Auth: sign-in, self-service registration,
+  password reset/change) with a `staff` table carrying the real
+  access-control role — separate from job title
 - Full core hierarchy with real foreign keys: Programme → Project →
   Objective → Outcome → Output → Activity → Task
 - Row Level Security on every table, scoped by role + project/programme
@@ -31,8 +32,10 @@ operations** phases:
 - An audit log that records every insert/update/delete on the core tables,
   written only by a `SECURITY DEFINER` trigger — no role can write to it directly
 - Dashboard, Programmes, Projects (with a project workspace showing the full
-  results-framework-to-task chain), Activities, Team, My Work, and Audit Log
-  pages, all reading real (not hard-coded) data
+  results-framework-to-task chain plus its locations, risks, and documents),
+  Activities, a cross-project Workplan view, Locations, Risk Register,
+  Documents/Evidence (Supabase Storage), Attendance, Team, My Work, Users &
+  Access, and Audit Log pages, all reading real (not hard-coded) data
 - Connected demo data across 4 programmes and 8 projects (see
   [Demo data](#demo-data) below)
 
