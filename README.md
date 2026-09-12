@@ -17,10 +17,11 @@ workspaces, and every report.
 - **Backend:** Supabase — PostgreSQL 17, Auth, Storage, Row Level Security, PostGIS
 - **Hosting:** Vercel (frontend), Supabase (database/auth/storage)
 
-## Project status: Phase 0 + Phase 1 + Phase 2
+## Project status: Phase 0 through Phase 4
 
 This repository currently implements the **foundation**, **core operations**,
-and **project management** phases:
+**project management**, **management systems**, and **programme modules**
+phases:
 
 - Authentication (Supabase Auth: sign-in, self-service registration,
   password reset/change) with a `staff` table carrying the real
@@ -31,18 +32,33 @@ and **project management** phases:
   assignment (see [Security notes](#security-notes) below)
 - An audit log that records every insert/update/delete on the core tables,
   written only by a `SECURITY DEFINER` trigger — no role can write to it directly
-- Dashboard, Programmes, Projects (with a project workspace showing the full
-  results-framework-to-task chain plus its locations, risks, and documents),
-  Activities, a cross-project Workplan view, Locations, Risk Register,
-  Documents/Evidence (Supabase Storage), Attendance, Team, My Work, Users &
-  Access, and Audit Log pages, all reading real (not hard-coded) data
+- Dashboard (with live management alerts computed from real data — delayed
+  activities, overdue tasks/governance actions, over-budget projects, high
+  risks, off-track indicators), Programmes, Projects (with a project
+  workspace showing the full results-framework-to-task chain plus its
+  locations, risks, indicators, finance link, programme module link, and
+  documents), Activities, a cross-project Workplan view, Locations, Risk
+  Register, Documents/Evidence (Supabase Storage), Attendance, Team, My
+  Work, Users & Access, Audit Log, M&E/MEAL indicators, Finance
+  (budgets/expenditure/commitments with role-restricted access), Reports
+  (CSV export), and a super-admin Data Management browser
+- Four programme modules, each connected to projects/programmes through
+  real foreign keys rather than free text:
+  - **Humanitarian** — needs assessments, households, beneficiaries,
+    assistance plans, distributions
+  - **Landmine / Mine Action** — hazard tracking with role-based
+    coordinate sensitivity (see [Security notes](#security-notes)), mine
+    risk education/community awareness sessions, surveys, victim assistance
+  - **Health** — facilities, services, outreach, referrals (explicitly not
+    a medical-record system)
+  - **Governance** — stakeholder → consultation → recommendation →
+    decision → action, with overdue actions flagged automatically
 - Connected demo data across 4 programmes and 8 projects (see
   [Demo data](#demo-data) below)
 
-Later phases (M&E/MEAL, Finance, the Humanitarian / Mine Action / Health /
-Governance modules, GIS, advanced reporting) are represented in the sidebar
-navigation as disabled "Phase N" entries so the intended shape of the system
-stays visible, but are not yet built.
+Phase 5 (GIS map layers, advanced dashboards, offline readiness, donor
+reporting) is represented in the sidebar navigation as a disabled "Phase 5"
+entry so the intended shape of the system stays visible, but is not yet built.
 
 ## Local setup
 
@@ -69,7 +85,9 @@ schema changes in the Supabase dashboard without also recording them here.
 Migration order matters: extensions/enums → staff & auth helpers →
 programmes/projects → results framework → locations → activities/tasks →
 audit log → RLS policies → advisor fixes → demo data → the one real admin
-login → demo login accounts → the `app` schema grant fix.
+login → demo login accounts → the `app` schema grant fix → risks →
+documents → attendance → indicators → finance → the four Phase 4 modules
+(humanitarian, mine action, health, governance) and their demo data.
 
 ### Demo data
 
@@ -110,10 +128,18 @@ it is not demo data.
 - The audit log (`public.audit_log`) has no direct INSERT/UPDATE/DELETE
   grant for any role — only its own `SECURITY DEFINER` trigger can write to
   it, so it cannot be tampered with even by a super_admin's ordinary queries.
-- `locations.is_sensitive` is a placeholder for the Mine Action module
-  (Phase 4): the Phase-1 policy already hides sensitive rows from anyone
-  without project access, but the generalized-vs-precise-coordinate view
-  distinction the spec calls for ships with that module, not before.
+- **Mine hazard coordinate sensitivity** (Phase 4): Postgres RLS is
+  row-level, not column-level, so a hazard's precise coordinates live in
+  their own table (`mine_hazard_coordinates`) with a stricter policy than
+  the hazard record itself. Anyone with project/programme access sees the
+  hazard and a point generalized to a ~1km grid (`mine_hazards.coordinates_generalized`,
+  computed by a trigger); only that project's own field team, its named
+  project officer, the parent programme's lead, or a super_admin can read
+  the precise point — executives and programme managers who only have
+  access via `is_management()`/programme leadership get the generalized
+  view, per the spec's "senior management sees generalized locations only."
+  `locations.is_sensitive` remains a separate, coarser row-level hide for
+  the shared Locations list.
 - **Grant gotcha to remember if you add new `app.*()` helper functions:**
   `SECURITY DEFINER` does not imply the calling role can invoke the
   function — `authenticated` also needs `USAGE` on the `app` schema and
