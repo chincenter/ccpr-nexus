@@ -14,6 +14,15 @@ function num(formData: FormData, key: string): number | null {
   return v == null ? null : Number(v);
 }
 
+function datesInOrder(startDate: string | null, endDate: string | null): boolean {
+  if (!startDate || !endDate) return true;
+  return startDate <= endDate;
+}
+
+function validProgress(progress: number | null): boolean {
+  return progress == null || (progress >= 0 && progress <= 100);
+}
+
 // ---------------------------------------------------------------------
 // Objectives
 // ---------------------------------------------------------------------
@@ -150,6 +159,10 @@ export async function archiveOutput(id: string, projectId: string, archived: boo
 // ---------------------------------------------------------------------
 
 export async function createActivity(projectId: string, outputId: string, formData: FormData) {
+  if (!datesInOrder(str(formData, "start_date"), str(formData, "end_date"))) {
+    return { error: "End date cannot be before the start date." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("activities").insert({
     project_id: projectId,
@@ -176,6 +189,10 @@ export async function updateActivity(
   projectId: string,
   formData: FormData,
 ) {
+  if (!datesInOrder(str(formData, "start_date"), str(formData, "end_date"))) {
+    return { error: "End date cannot be before the start date." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("activities")
@@ -231,6 +248,13 @@ export async function restoreActivity(activityId: string, projectId: string) {
 // ---------------------------------------------------------------------
 
 export async function createTask(activityId: string, projectId: string, formData: FormData) {
+  if (!datesInOrder(str(formData, "start_date"), str(formData, "due_date"))) {
+    return { error: "Due date cannot be before the start date." };
+  }
+  if (!validProgress(num(formData, "progress"))) {
+    return { error: "Progress must be between 0 and 100." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("tasks").insert({
     activity_id: activityId,
@@ -251,6 +275,13 @@ export async function createTask(activityId: string, projectId: string, formData
 }
 
 export async function updateTask(taskId: string, projectId: string, formData: FormData) {
+  if (!datesInOrder(str(formData, "start_date"), str(formData, "due_date"))) {
+    return { error: "Due date cannot be before the start date." };
+  }
+  if (!validProgress(num(formData, "progress"))) {
+    return { error: "Progress must be between 0 and 100." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("tasks")
@@ -278,6 +309,10 @@ export async function updateTaskProgress(
   projectId: string,
   data: { status: Enums<"task_status">; progress: number },
 ) {
+  if (!validProgress(data.progress)) {
+    return { error: "Progress must be between 0 and 100." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("tasks")
@@ -298,5 +333,82 @@ export async function archiveTask(taskId: string, projectId: string, archived: b
 
   if (error) return { error: error.message };
   revalidatePath(`/projects/${projectId}`);
+  return { error: null };
+}
+
+// ---------------------------------------------------------------------
+// Project Team
+// ---------------------------------------------------------------------
+
+export async function addTeamMember(projectId: string, formData: FormData) {
+  const staffId = str(formData, "staff_id");
+  const roleOnProject = str(formData, "role_on_project");
+  if (!staffId) return { error: "Select a staff member." };
+  if (!roleOnProject) return { error: "Enter this person's role on the project." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("project_team").insert({
+    project_id: projectId,
+    staff_id: staffId,
+    role_on_project: roleOnProject,
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "This staff member is already on the project team." };
+    }
+    return { error: error.message };
+  }
+  revalidatePath(`/projects/${projectId}`);
+  return { error: null };
+}
+
+export async function removeTeamMember(projectId: string, staffId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("project_team")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("staff_id", staffId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/projects/${projectId}`);
+  return { error: null };
+}
+
+// ---------------------------------------------------------------------
+// Project Locations
+// ---------------------------------------------------------------------
+
+export async function addProjectLocation(projectId: string, formData: FormData) {
+  const locationId = str(formData, "location_id");
+  if (!locationId) return { error: "Select a location." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("project_locations").insert({
+    project_id: projectId,
+    location_id: locationId,
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "This location is already linked to the project." };
+    }
+    return { error: error.message };
+  }
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/locations");
+  return { error: null };
+}
+
+export async function removeProjectLocation(projectId: string, locationId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("project_locations")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("location_id", locationId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/locations");
   return { error: null };
 }

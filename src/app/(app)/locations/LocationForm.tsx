@@ -75,6 +75,10 @@ export function LocationForm({ locationTypes }: { locationTypes: readonly string
         <label className="block text-xs font-medium text-slate-600">Longitude (optional)</label>
         <input name="longitude" type="number" step="any" className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
       </div>
+      <div className="sm:col-span-2 lg:col-span-4">
+        <label className="block text-xs font-medium text-slate-600">Notes (optional)</label>
+        <textarea name="notes" rows={2} className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+      </div>
 
       {error && <p className="col-span-full text-sm text-red-600">{error}</p>}
 

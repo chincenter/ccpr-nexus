@@ -1702,6 +1702,7 @@ export type Database = {
           lng: number | null
           location_type: Database["public"]["Enums"]["location_type"]
           name: string
+          notes: string | null
           parent_id: string | null
           state_region: string | null
           township: string | null
@@ -1722,6 +1723,7 @@ export type Database = {
           lng?: number | null
           location_type: Database["public"]["Enums"]["location_type"]
           name: string
+          notes?: string | null
           parent_id?: string | null
           state_region?: string | null
           township?: string | null
@@ -1742,6 +1744,7 @@ export type Database = {
           lng?: number | null
           location_type?: Database["public"]["Enums"]["location_type"]
           name?: string
+          notes?: string | null
           parent_id?: string | null
           state_region?: string | null
           township?: string | null
@@ -2503,16 +2506,19 @@ export type Database = {
       project_locations: {
         Row: {
           created_at: string
+          id: string
           location_id: string
           project_id: string
         }
         Insert: {
           created_at?: string
+          id?: string
           location_id: string
           project_id: string
         }
         Update: {
           created_at?: string
+          id?: string
           location_id?: string
           project_id?: string
         }
@@ -2536,18 +2542,21 @@ export type Database = {
       project_team: {
         Row: {
           created_at: string
+          id: string
           project_id: string
           role_on_project: string
           staff_id: string
         }
         Insert: {
           created_at?: string
+          id?: string
           project_id: string
           role_on_project?: string
           staff_id: string
         }
         Update: {
           created_at?: string
+          id?: string
           project_id?: string
           role_on_project?: string
           staff_id?: string
@@ -3240,6 +3249,8 @@ export type Database = {
         | "township"
         | "village"
         | "site"
+        | "health_facility"
+        | "other"
       mine_action_status:
         | "open"
         | "in_progress"
@@ -3472,6 +3483,8 @@ export const Constants = {
         "township",
         "village",
         "site",
+        "health_facility",
+        "other",
       ],
       mine_action_status: [
         "open",

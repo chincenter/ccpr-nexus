@@ -16,6 +16,8 @@ import {
 } from "@/components/project/ResultsFrameworkControls";
 import { DocumentUploader } from "@/components/documents/DocumentUploader";
 import { DocumentList } from "@/components/documents/DocumentList";
+import { NewTeamMemberForm, TeamMemberRow } from "@/components/project/ProjectTeamControls";
+import { NewProjectLocationForm, ProjectLocationPill } from "@/components/project/ProjectLocationControls";
 
 export default async function ProjectDetailPage({ params }: PageProps<"/projects/[id]">) {
   const { id } = await params;
@@ -51,7 +53,10 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       )
       .eq("project_id", id)
       .order("start_date"),
-    supabase.from("project_team").select("staff_id, role_on_project, staff(full_name, job_title)").eq("project_id", id),
+    supabase
+      .from("project_team")
+      .select("staff_id, role_on_project, staff(full_name, job_title, is_active)")
+      .eq("project_id", id),
     supabase.from("staff").select("id, full_name").eq("is_active", true).order("full_name"),
     supabase.from("locations").select("id, name").is("archived_at", null).order("name"),
   ]);
@@ -103,6 +108,12 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
     list.push(t);
     tasksByActivity.set(t.activity_id, list);
   }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const completedTaskCount = (tasks ?? []).filter((t) => t.status === "completed").length;
+  const overdueTaskCount = (tasks ?? []).filter(
+    (t) => t.due_date && t.due_date < today && t.status !== "completed" && t.status !== "cancelled",
+  ).length;
 
   const taskIds = (tasks ?? []).map((t) => t.id);
   const taskDocumentsQuery = await (taskIds.length
@@ -243,38 +254,87 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       </div>
 
       <div>
-        <h2 className="text-base font-semibold text-slate-900">Team</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Workplan</h2>
+          <Link
+            href={`/workplan?project=${project.id}`}
+            className="text-sm font-medium text-teal-700 hover:underline"
+          >
+            Open full workplan →
+          </Link>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <SummaryStat label="Tasks" value={String((tasks ?? []).length)} />
+          <SummaryStat label="Overdue Tasks" value={String(overdueTaskCount)} />
+          <SummaryStat
+            label="Tasks Completed"
+            value={
+              (tasks ?? []).length
+                ? `${Math.round((completedTaskCount / (tasks ?? []).length) * 100)}%`
+                : "—"
+            }
+          />
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Team</h2>
+          {canEdit && <NewTeamMemberForm projectId={project.id} staff={staffList ?? []} />}
+        </div>
         <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
           {(project.officer as { full_name: string } | null) && (
             <li className="flex justify-between px-4 py-2 text-sm">
               <span className="text-slate-800">{(project.officer as { full_name: string }).full_name}</span>
-              <span className="text-slate-500">Project Officer</span>
+              <span className="text-slate-500">Project Officer / Lead</span>
             </li>
           )}
-          {(team ?? []).map((member) => (
-            <li key={member.staff_id} className="flex justify-between px-4 py-2 text-sm">
-              <span className="text-slate-800">{(member.staff as { full_name: string } | null)?.full_name}</span>
-              <span className="text-slate-500">{member.role_on_project.replaceAll("_", " ")}</span>
-            </li>
-          ))}
+          {(team ?? []).map((member) => {
+            const memberStaff = member.staff as
+              | { full_name: string; job_title: string | null; is_active: boolean }
+              | null;
+            if (!memberStaff) return null;
+            return (
+              <TeamMemberRow
+                key={member.staff_id}
+                projectId={project.id}
+                staffId={member.staff_id}
+                fullName={memberStaff.full_name}
+                jobTitle={memberStaff.job_title}
+                roleOnProject={member.role_on_project}
+                isActive={memberStaff.is_active}
+                canEdit={canEdit}
+              />
+            );
+          })}
+          {!(project.officer as { full_name: string } | null) && (team ?? []).length === 0 && (
+            <li className="px-4 py-2 text-sm text-slate-500">No team members added yet.</li>
+          )}
         </ul>
       </div>
 
       <div>
-        <h2 className="text-base font-semibold text-slate-900">Locations</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Locations</h2>
+          {canEdit && <NewProjectLocationForm projectId={project.id} locations={locations ?? []} />}
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {(projectLocations ?? []).map((pl) => {
             const loc = pl.location as { id: string; name: string; location_type: string } | null;
             return (
               loc && (
-                <span key={loc.id} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
-                  {loc.name}
-                </span>
+                <ProjectLocationPill
+                  key={loc.id}
+                  projectId={project.id}
+                  locationId={loc.id}
+                  name={loc.name}
+                  canEdit={canEdit}
+                />
               )
             );
           })}
           {(projectLocations ?? []).length === 0 && (
-            <p className="text-sm text-slate-500">No locations linked yet — manage these from the Locations page.</p>
+            <p className="text-sm text-slate-500">No locations linked yet.</p>
           )}
         </div>
       </div>
