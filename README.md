@@ -17,11 +17,11 @@ workspaces, and every report.
 - **Backend:** Supabase — PostgreSQL 17, Auth, Storage, Row Level Security, PostGIS
 - **Hosting:** Vercel (frontend), Supabase (database/auth/storage)
 
-## Project status: Phase 0 through Phase 4
+## Project status: Phase 0 through Phase 5 (complete)
 
-This repository currently implements the **foundation**, **core operations**,
-**project management**, **management systems**, and **programme modules**
-phases:
+This repository implements all phases of the original spec: **foundation**,
+**core operations**, **project management**, **management systems**,
+**programme modules**, and **advanced**:
 
 - Authentication (Supabase Auth: sign-in, self-service registration,
   password reset/change) with a `staff` table carrying the real
@@ -55,10 +55,24 @@ phases:
     decision → action, with overdue actions flagged automatically
 - Connected demo data across 4 programmes and 8 projects (see
   [Demo data](#demo-data) below)
-
-Phase 5 (GIS map layers, advanced dashboards, offline readiness, donor
-reporting) is represented in the sidebar navigation as a disabled "Phase 5"
-entry so the intended shape of the system stays visible, but is not yet built.
+- **GIS Map** (`/gis`) — Leaflet/OpenStreetMap layers for Projects,
+  Humanitarian, Mine Action, Health, and Governance, toggled independently.
+  Mine Action markers show the precise point only where RLS grants it and
+  fall back to the generalized point otherwise, enforced by the database,
+  not the map component
+- **Executive Dashboard** KPIs and programme cards expanded with
+  Beneficiaries Reached, Locations Covered, Total Expenditure, and
+  per-programme budget utilization
+- **Reports** expanded with Management, Beneficiary, Humanitarian, Mine
+  Action, Health, and Governance reports, plus a Donor column on Project
+  Summary — all CSV-exportable and pulled live from connected tables
+- **Global search** (`/search`, via the sidebar search box) across
+  projects, activities, staff, locations, beneficiaries, indicators, and
+  documents, scoped by the same RLS as everywhere else
+- A minimal **PWA shell** (installable manifest + a service worker that
+  caches only static assets and shows an offline notice for page loads) —
+  deliberately not full offline data entry, since this is a live,
+  permission-scoped system; see [Security notes](#security-notes)
 
 ## Local setup
 
