@@ -71,7 +71,11 @@ export default async function ActivitiesPage({ searchParams }: PageProps<"/activ
               const project = activity.project as { id: string; name: string } | null;
               return (
                 <tr key={activity.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 font-medium text-slate-900">{activity.name}</td>
+                  <td className="px-4 py-2 font-medium text-slate-900">
+                    <Link href={`/activities/${activity.id}`} className="text-slate-900 hover:text-teal-800 hover:underline">
+                      {activity.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-2 text-slate-600">
                     {project && (
                       <Link href={`/projects/${project.id}`} className="text-teal-800 hover:underline">

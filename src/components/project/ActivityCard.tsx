@@ -50,6 +50,7 @@ export function ActivityCard({
   locations,
   canEdit,
   isArchived,
+  defaultExpanded = false,
 }: {
   activity: Activity;
   tasks: Task[];
@@ -59,10 +60,11 @@ export function ActivityCard({
   locations: { id: string; name: string }[];
   canEdit: boolean;
   isArchived: boolean;
+  defaultExpanded?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [editing, setEditing] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
   const [error, setError] = useState<string | null>(null);
