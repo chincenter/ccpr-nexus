@@ -37,7 +37,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "M&E / MEAL", href: "/me-meal" },
       { label: "Finance", href: "/finance" },
-      { label: "GIS Map", phase: 5 },
+      { label: "GIS Map", href: "/gis" },
       { label: "Risks & Security", href: "/risks" },
       { label: "Reports", href: "/reports" },
       { label: "Documents", href: "/documents" },

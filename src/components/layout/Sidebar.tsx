@@ -6,6 +6,7 @@ import { useState } from "react";
 import clsx from "clsx";
 import { NAV_SECTIONS } from "@/lib/nav";
 import { Menu, X } from "lucide-react";
+import { SearchBox } from "./SearchBox";
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -89,6 +90,7 @@ export function Sidebar({ staffName, roleLabel }: { staffName: string; roleLabel
                 <X size={20} />
               </button>
             </div>
+            <SearchBox />
             <NavLinks onNavigate={() => setMobileOpen(false)} />
             <SidebarFooter staffName={staffName} roleLabel={roleLabel} />
           </div>
@@ -99,6 +101,9 @@ export function Sidebar({ staffName, roleLabel }: { staffName: string; roleLabel
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
         <div className="border-b border-slate-200 px-4 py-4">
           <span className="text-lg font-semibold text-slate-900">CCPR Nexus</span>
+        </div>
+        <div className="border-b border-slate-200">
+          <SearchBox />
         </div>
         <NavLinks />
         <SidebarFooter staffName={staffName} roleLabel={roleLabel} />

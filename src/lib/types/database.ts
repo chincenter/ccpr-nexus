@@ -1698,6 +1698,8 @@ export type Database = {
           id: string
           is_demo: boolean
           is_sensitive: boolean
+          lat: number | null
+          lng: number | null
           location_type: Database["public"]["Enums"]["location_type"]
           name: string
           parent_id: string | null
@@ -1716,6 +1718,8 @@ export type Database = {
           id?: string
           is_demo?: boolean
           is_sensitive?: boolean
+          lat?: number | null
+          lng?: number | null
           location_type: Database["public"]["Enums"]["location_type"]
           name: string
           parent_id?: string | null
@@ -1734,6 +1738,8 @@ export type Database = {
           id?: string
           is_demo?: boolean
           is_sensitive?: boolean
+          lat?: number | null
+          lng?: number | null
           location_type?: Database["public"]["Enums"]["location_type"]
           name?: string
           parent_id?: string | null
