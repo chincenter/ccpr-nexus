@@ -1574,11 +1574,60 @@ export type Database = {
           },
         ]
       }
+      indicator_measurements: {
+        Row: {
+          actual: number
+          created_at: string
+          entered_by: string | null
+          id: string
+          indicator_id: string
+          notes: string | null
+          reporting_period: string
+          source: string | null
+        }
+        Insert: {
+          actual: number
+          created_at?: string
+          entered_by?: string | null
+          id?: string
+          indicator_id: string
+          notes?: string | null
+          reporting_period: string
+          source?: string | null
+        }
+        Update: {
+          actual?: number
+          created_at?: string
+          entered_by?: string | null
+          id?: string
+          indicator_id?: string
+          notes?: string | null
+          reporting_period?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicator_measurements_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicator_measurements_indicator_id_fkey"
+            columns: ["indicator_id"]
+            isOneToOne: false
+            referencedRelation: "indicators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       indicators: {
         Row: {
           actual: number | null
           archived_at: string | null
           baseline: number | null
+          code: string | null
           created_at: string
           created_by: string | null
           data_source: string | null
@@ -1604,6 +1653,7 @@ export type Database = {
           actual?: number | null
           archived_at?: string | null
           baseline?: number | null
+          code?: string | null
           created_at?: string
           created_by?: string | null
           data_source?: string | null
@@ -1629,6 +1679,7 @@ export type Database = {
           actual?: number | null
           archived_at?: string | null
           baseline?: number | null
+          code?: string | null
           created_at?: string
           created_by?: string | null
           data_source?: string | null

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentStaff, OPERATIONAL_ROLES } from "@/lib/auth";
+import { getCurrentStaff, isManagement, OPERATIONAL_ROLES } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
-import { safePercent, achievementLabel, riskRating } from "@/lib/calculations";
+import { safePercent, indicatorStatus, riskRating } from "@/lib/calculations";
+import { IndicatorForm } from "@/app/(app)/me-meal/IndicatorForm";
+import { IndicatorCard } from "@/app/(app)/me-meal/IndicatorCard";
 import { ActivityCard } from "@/components/project/ActivityCard";
 import {
   NewObjectiveForm,
@@ -78,15 +80,108 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
 
   const { data: indicators } = await supabase
     .from("indicators")
-    .select("*")
+    .select("*, responsible:staff!indicators_responsible_staff_id_fkey(full_name)")
     .eq("project_id", id)
     .is("archived_at", null);
+
+  const indicatorIds = (indicators ?? []).map((i) => i.id);
+  const indicatorMeasurementsQuery = indicatorIds.length
+    ? supabase
+        .from("indicator_measurements")
+        .select("*, entered:staff!indicator_measurements_entered_by_fkey(full_name)")
+        .in("indicator_id", indicatorIds)
+        .order("created_at", { ascending: false })
+    : null;
+  const indicatorDocumentsQuery = indicatorIds.length
+    ? supabase
+        .from("documents")
+        .select("*, uploader:staff!documents_created_by_fkey(full_name)")
+        .eq("entity_type", "indicator")
+        .in("entity_id", indicatorIds)
+        .is("archived_at", null)
+    : null;
+  const indicatorHistoryQuery = indicatorIds.length
+    ? supabase
+        .from("audit_log")
+        .select("id, action, created_at, entity_id, staff(full_name)")
+        .eq("entity_type", "indicators")
+        .in("entity_id", indicatorIds)
+        .order("created_at", { ascending: false })
+    : null;
+
+  const [indicatorMeasurementsResult, indicatorDocumentsResult, indicatorHistoryResult] = await Promise.all([
+    indicatorMeasurementsQuery,
+    indicatorDocumentsQuery,
+    indicatorHistoryQuery,
+  ]);
+  const indicatorMeasurements = indicatorMeasurementsResult?.data ?? [];
+  const indicatorDocuments = indicatorDocumentsResult?.data ?? [];
+  const indicatorHistory = indicatorHistoryResult?.data ?? [];
+
+  const measurementsByIndicator = new Map<string, typeof indicatorMeasurements>();
+  for (const m of indicatorMeasurements) {
+    const list = measurementsByIndicator.get(m.indicator_id) ?? [];
+    list.push(m);
+    measurementsByIndicator.set(m.indicator_id, list);
+  }
+  const documentsByIndicator = new Map<string, typeof indicatorDocuments>();
+  for (const d of indicatorDocuments) {
+    const list = documentsByIndicator.get(d.entity_id) ?? [];
+    list.push(d);
+    documentsByIndicator.set(d.entity_id, list);
+  }
+  const historyByIndicator = new Map<string, typeof indicatorHistory>();
+  for (const h of indicatorHistory) {
+    const list = historyByIndicator.get(h.entity_id) ?? [];
+    if (list.length < 5) list.push(h);
+    historyByIndicator.set(h.entity_id, list);
+  }
+
+  const meCanEdit =
+    !!staff && ((OPERATIONAL_ROLES as readonly string[]).includes(staff.system_role) || staff.system_role === "me_meal");
+  const meCanCheck = !!staff && (staff.system_role === "me_meal" || isManagement(staff.system_role));
+  const meCanApprove = !!staff && isManagement(staff.system_role);
+
+  const meSummary = {
+    total: (indicators ?? []).length,
+    onTrack: (indicators ?? []).filter((i) => indicatorStatus(i.actual, i.target) === "on_track").length,
+    atRisk: (indicators ?? []).filter((i) => indicatorStatus(i.actual, i.target) === "at_risk").length,
+    delayed: (indicators ?? []).filter((i) => indicatorStatus(i.actual, i.target) === "delayed").length,
+    achieved: (indicators ?? []).filter((i) => indicatorStatus(i.actual, i.target) === "achieved").length,
+    awaitingVerification: (indicators ?? []).filter(
+      (i) => i.verification_status === "submitted" || i.verification_status === "under_review",
+    ).length,
+  };
 
   const objectiveIds = (objectives ?? []).map((o) => o.id);
   const relevantOutcomes = (outcomes ?? []).filter((o) => objectiveIds.includes(o.objective_id));
   const outcomeIds = relevantOutcomes.map((o) => o.id);
   const relevantOutputs = (outputs ?? []).filter((o) => outcomeIds.includes(o.outcome_id));
   const outputIds = new Set(relevantOutputs.map((o) => o.id));
+
+  const indicatorObjectiveOptions = (objectives ?? []).map((o) => ({
+    id: o.id,
+    label: `${o.code ? `${o.code} — ` : ""}${o.name}`,
+    project_id: id,
+  }));
+  const indicatorOutcomeOptions = relevantOutcomes.map((o) => ({
+    id: o.id,
+    label: `${o.code ? `${o.code} — ` : ""}${o.name}`,
+    project_id: id,
+  }));
+  const indicatorOutputOptions = relevantOutputs.map((o) => ({
+    id: o.id,
+    label: `${o.code ? `${o.code} — ` : ""}${o.name}`,
+    project_id: id,
+  }));
+
+  const indicatorResultLabel = (resultType: string | null, resultId: string | null): string | null => {
+    if (!resultType || !resultId) return null;
+    const source =
+      resultType === "objective" ? indicatorObjectiveOptions : resultType === "outcome" ? indicatorOutcomeOptions : indicatorOutputOptions;
+    const entry = source.find((o) => o.id === resultId);
+    return entry ? `${resultType[0].toUpperCase()}${resultType.slice(1)}: ${entry.label}` : null;
+  };
 
   const activityList = (activities ?? []).filter((a) => outputIds.has(a.output_id));
   const activeActivities = activityList.filter((a) => !a.archived_at);
@@ -363,26 +458,59 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       </div>
 
       <div>
-        <h2 className="text-base font-semibold text-slate-900">M&amp;E Indicators</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">M&amp;E</h2>
+          {meCanEdit && (
+            <IndicatorForm
+              projects={[{ id: project.id, name: project.name }]}
+              programmes={[]}
+              staff={staffList ?? []}
+              objectives={indicatorObjectiveOptions}
+              outcomes={indicatorOutcomeOptions}
+              outputs={indicatorOutputOptions}
+              fixedProjectId={project.id}
+            />
+          )}
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <MeSummaryStat label="Indicators" value={meSummary.total} />
+          <MeSummaryStat label="On Track" value={meSummary.onTrack} tone="green" />
+          <MeSummaryStat label="At Risk" value={meSummary.atRisk} tone="amber" />
+          <MeSummaryStat label="Delayed" value={meSummary.delayed} tone="red" />
+          <MeSummaryStat label="Achieved" value={meSummary.achieved} tone="green" />
+        </div>
+        {meSummary.awaitingVerification > 0 && (
+          <p className="mt-2 text-xs text-amber-700">
+            {meSummary.awaitingVerification} indicator{meSummary.awaitingVerification === 1 ? "" : "s"} awaiting verification.
+          </p>
+        )}
+
         <div className="mt-3 space-y-2">
-          {(indicators ?? []).map((indicator) => {
-            const pct = safePercent(indicator.actual, indicator.target);
-            return (
-              <div key={indicator.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                <div>
-                  <p className="font-medium text-slate-800">{indicator.name}</p>
-                  <p className="text-xs text-slate-500">
-                    {indicator.actual ?? "—"} / {indicator.target ?? "—"} {indicator.unit ?? ""}
-                  </p>
-                </div>
-                <span className="text-xs font-medium text-slate-600">
-                  {pct != null ? `${pct}%` : "—"} · {achievementLabel(pct).replaceAll("_", " ")}
-                </span>
-              </div>
-            );
-          })}
+          {(indicators ?? []).map((indicator) => (
+            <IndicatorCard
+              key={indicator.id}
+              indicator={{
+                ...indicator,
+                project: { id: project.id, name: project.name },
+                resultLabel: indicatorResultLabel(indicator.result_type, indicator.result_id),
+              }}
+              canEdit={meCanEdit}
+              canCheck={meCanCheck}
+              canApprove={meCanApprove}
+              measurements={measurementsByIndicator.get(indicator.id) ?? []}
+              documents={documentsByIndicator.get(indicator.id) ?? []}
+              history={historyByIndicator.get(indicator.id) ?? []}
+              projects={[{ id: project.id, name: project.name }]}
+              programmes={[]}
+              staff={staffList ?? []}
+              objectives={indicatorObjectiveOptions}
+              outcomes={indicatorOutcomeOptions}
+              outputs={indicatorOutputOptions}
+            />
+          ))}
           {(indicators ?? []).length === 0 && (
-            <p className="text-sm text-slate-500">No indicators recorded — add these from the M&amp;E / MEAL page.</p>
+            <p className="text-sm text-slate-500">No indicators recorded for this project yet.</p>
           )}
         </div>
       </div>
@@ -429,6 +557,22 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-slate-200 bg-white p-3">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function MeSummaryStat({ label, value, tone }: { label: string; value: number; tone?: "green" | "amber" | "red" }) {
+  const toneClasses = tone
+    ? {
+        green: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        amber: "border-amber-200 bg-amber-50 text-amber-700",
+        red: "border-red-200 bg-red-50 text-red-700",
+      }[tone]
+    : "border-slate-200 bg-white text-slate-900";
+  return (
+    <div className={`rounded-lg border p-3 ${toneClasses}`}>
+      <p className="text-xs font-medium uppercase tracking-wide">{label}</p>
+      <p className="mt-1 text-xl font-semibold">{value}</p>
     </div>
   );
 }

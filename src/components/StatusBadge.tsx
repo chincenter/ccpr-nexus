@@ -7,6 +7,7 @@ const STATUS_STYLES: Record<string, string> = {
   published: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   active: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   on_track: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  achieved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   // yellow — at risk / delayed
   delayed: "bg-amber-50 text-amber-700 ring-amber-600/20",
   at_risk: "bg-amber-50 text-amber-700 ring-amber-600/20",

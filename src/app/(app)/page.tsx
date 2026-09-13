@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { safePercent, budgetUtilization } from "@/lib/calculations";
+import { safePercent, budgetUtilization, indicatorStatus } from "@/lib/calculations";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
 import { getManagementAlerts } from "@/lib/alerts";
 
@@ -33,6 +33,7 @@ export default async function DashboardPage() {
     { data: beneficiaries },
     { data: coveredLocations },
     { data: budgets },
+    { data: indicators },
     alerts,
   ] = await Promise.all([
     supabase.from("programmes").select("*").is("archived_at", null),
@@ -44,6 +45,7 @@ export default async function DashboardPage() {
       .from("budgets")
       .select("id, project_id, approved_budget, budget_lines(expenditures(amount))")
       .is("archived_at", null),
+    supabase.from("indicators").select("actual, target, verification_status").is("archived_at", null),
     getManagementAlerts(supabase),
   ]);
 
@@ -61,6 +63,22 @@ export default async function DashboardPage() {
   const ongoingActivities = activityList.filter((a) => a.status === "ongoing").length;
   const delayedActivities = activityList.filter((a) => a.status === "delayed").length;
   const overallProgress = safePercent(completedActivities, activityList.length);
+
+  const indicatorList = indicators ?? [];
+  const indicatorAchievements = indicatorList
+    .map((i) => safePercent(i.actual, i.target))
+    .filter((p): p is number => p != null);
+  const meSummary = {
+    total: indicatorList.length,
+    atRisk: indicatorList.filter((i) => indicatorStatus(i.actual, i.target) === "at_risk").length,
+    delayed: indicatorList.filter((i) => indicatorStatus(i.actual, i.target) === "delayed").length,
+    awaitingVerification: indicatorList.filter(
+      (i) => i.verification_status === "submitted" || i.verification_status === "under_review",
+    ).length,
+    averageAchievement: indicatorAchievements.length
+      ? Math.round(indicatorAchievements.reduce((sum, p) => sum + p, 0) / indicatorAchievements.length)
+      : null,
+  };
 
   const budgetByProject = new Map<string, { approved: number; expenditure: number }>();
   for (const b of budgets ?? []) {
@@ -115,6 +133,13 @@ export default async function DashboardPage() {
         <Kpi label="Activities Completed" value={String(completedActivities)} />
         <Kpi label="Activities Ongoing" value={String(ongoingActivities)} />
         <Kpi label="Activities Delayed" value={String(delayedActivities)} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <Kpi label="M&E Indicators" value={String(meSummary.total)} />
+        <Kpi label="Average Achievement" value={meSummary.averageAchievement != null ? `${meSummary.averageAchievement}%` : "—"} />
+        <Kpi label="Indicators At Risk / Delayed" value={String(meSummary.atRisk + meSummary.delayed)} />
+        <Kpi label="Awaiting Verification" value={String(meSummary.awaitingVerification)} />
       </div>
 
       {alerts.length > 0 && (

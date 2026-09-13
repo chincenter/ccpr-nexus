@@ -8,7 +8,7 @@ export function DocumentUploader({
   entityType,
   entityId,
 }: {
-  entityType: "project" | "programme" | "activity" | "task" | "risk";
+  entityType: "project" | "programme" | "activity" | "task" | "risk" | "indicator";
   entityId: string;
 }) {
   const router = useRouter();

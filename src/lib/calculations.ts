@@ -13,6 +13,25 @@ export function achievementLabel(pct: number | null): "on_track" | "at_risk" | "
   return "off_track";
 }
 
+/**
+ * M&E indicator status — purely computed from actual/target, never a
+ * separately-entered field, so it can never drift out of sync with the
+ * numbers behind it. Rule: no actual recorded yet -> not started; then
+ * banded by achievement percentage. There is no manual override because
+ * no such field exists on the indicator record.
+ */
+export type IndicatorStatus = "not_started" | "achieved" | "on_track" | "at_risk" | "delayed";
+
+export function indicatorStatus(actual: number | null, target: number | null): IndicatorStatus {
+  if (actual == null) return "not_started";
+  const pct = safePercent(actual, target);
+  if (pct == null) return "not_started";
+  if (pct >= 100) return "achieved";
+  if (pct >= 75) return "on_track";
+  if (pct >= 40) return "at_risk";
+  return "delayed";
+}
+
 const RISK_LEVEL_SCORE: Record<"low" | "medium" | "high", number> = { low: 1, medium: 2, high: 3 };
 
 /** Likelihood x impact -> a simple 3-band rating, used for sorting/badging the risk register. */

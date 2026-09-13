@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff, isManagement } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
-import { safePercent } from "@/lib/calculations";
+import { safePercent, indicatorStatus } from "@/lib/calculations";
 import { ProgrammeEditForm } from "./ProgrammeEditForm";
 import { ProjectForm } from "./ProjectForm";
 
@@ -42,6 +42,29 @@ export default async function ProgrammeDetailPage({ params }: PageProps<"/progra
     activitiesByProject.set(a.project_id, list);
   }
 
+  const { data: programmeIndicators } = await supabase
+    .from("indicators")
+    .select("actual, target, verification_status")
+    .is("archived_at", null)
+    .or(`programme_id.eq.${id}${projectIds.length ? `,project_id.in.(${projectIds.join(",")})` : ""}`);
+
+  const meIndicators = programmeIndicators ?? [];
+  const achievements = meIndicators
+    .map((i) => safePercent(i.actual, i.target))
+    .filter((p): p is number => p != null);
+  const averageAchievement = achievements.length
+    ? Math.round(achievements.reduce((sum, p) => sum + p, 0) / achievements.length)
+    : null;
+  const meSummary = {
+    indicators: meIndicators.length,
+    atRisk: meIndicators.filter((i) => indicatorStatus(i.actual, i.target) === "at_risk").length,
+    delayed: meIndicators.filter((i) => indicatorStatus(i.actual, i.target) === "delayed").length,
+    awaitingVerification: meIndicators.filter(
+      (i) => i.verification_status === "submitted" || i.verification_status === "under_review",
+    ).length,
+    averageAchievement,
+  };
+
   const canEditProgramme = isManagement(staff?.system_role) || (!!staff && programme.lead_staff_id === staff.id);
   const canCreateProject = isManagement(staff?.system_role) || staff?.system_role === "programme_manager";
 
@@ -61,6 +84,35 @@ export default async function ProgrammeDetailPage({ params }: PageProps<"/progra
       </div>
 
       {canEditProgramme && <ProgrammeEditForm programme={programme} staff={staffList ?? []} />}
+
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">M&amp;E Summary</h2>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Projects</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">{(projects ?? []).length}</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Indicators</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">{meSummary.indicators}</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Average Achievement</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">
+              {meSummary.averageAchievement != null ? `${meSummary.averageAchievement}%` : "—"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-amber-700">At Risk / Delayed</p>
+            <p className="mt-1 text-xl font-semibold text-amber-700">{meSummary.atRisk + meSummary.delayed}</p>
+          </div>
+        </div>
+        {meSummary.awaitingVerification > 0 && (
+          <p className="mt-2 text-xs text-slate-500">
+            {meSummary.awaitingVerification} indicator{meSummary.awaitingVerification === 1 ? "" : "s"} awaiting verification.
+          </p>
+        )}
+      </div>
 
       <div>
         <div className="flex items-center justify-between">
