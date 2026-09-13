@@ -5,7 +5,7 @@ import { getCurrentStaff, isManagement } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
 import { safePercent, indicatorStatus } from "@/lib/calculations";
 import { ProgrammeEditForm } from "./ProgrammeEditForm";
-import { ProjectForm } from "./ProjectForm";
+import { ProjectForm } from "@/components/project/ProjectForm";
 
 export default async function ProgrammeDetailPage({ params }: PageProps<"/programmes/[id]">) {
   const { id } = await params;
@@ -117,7 +117,7 @@ export default async function ProgrammeDetailPage({ params }: PageProps<"/progra
       <div>
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900">Projects</h2>
-          {canCreateProject && <ProjectForm programmeId={programme.id} staff={staffList ?? []} />}
+          {canCreateProject && <ProjectForm fixedProgrammeId={programme.id} staff={staffList ?? []} />}
         </div>
         <div className="mt-3 space-y-2">
           {(projects ?? []).map((project) => {

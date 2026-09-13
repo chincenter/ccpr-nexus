@@ -2,11 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createProject } from "./actions";
+import { createProject } from "@/app/(app)/projects/actions";
 
 const STATUSES = ["planning", "active", "on_hold", "completed", "cancelled"];
 
-export function ProjectForm({ programmeId, staff }: { programmeId: string; staff: { id: string; full_name: string }[] }) {
+export function ProjectForm({
+  staff,
+  programmes,
+  fixedProgrammeId,
+}: {
+  staff: { id: string; full_name: string }[];
+  programmes?: { id: string; name: string }[];
+  fixedProgrammeId?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -19,7 +27,7 @@ export function ProjectForm({ programmeId, staff }: { programmeId: string; staff
         onClick={() => setOpen(true)}
         className="rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
       >
-        + Add Project
+        + New Project
       </button>
     );
   }
@@ -29,7 +37,7 @@ export function ProjectForm({ programmeId, staff }: { programmeId: string; staff
       action={(formData) => {
         setError(null);
         startTransition(async () => {
-          const result = await createProject(programmeId, formData);
+          const result = await createProject(formData);
           if (result.error) setError(result.error);
           else {
             setOpen(false);
@@ -39,6 +47,21 @@ export function ProjectForm({ programmeId, staff }: { programmeId: string; staff
       }}
       className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3"
     >
+      {fixedProgrammeId ? (
+        <input type="hidden" name="programme_id" value={fixedProgrammeId} />
+      ) : (
+        <div>
+          <label className="block text-xs font-medium text-slate-600">Programme</label>
+          <select name="programme_id" required className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+            <option value="">Select programme…</option>
+            {(programmes ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div>
         <label className="block text-xs font-medium text-slate-600">Project code</label>
         <input name="code" required className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />

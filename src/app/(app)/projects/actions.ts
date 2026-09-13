@@ -9,7 +9,10 @@ function str(formData: FormData, key: string): string | null {
   return typeof v === "string" && v.length > 0 ? v : null;
 }
 
-export async function createProject(programmeId: string, formData: FormData) {
+export async function createProject(formData: FormData) {
+  const programmeId = str(formData, "programme_id");
+  if (!programmeId) return { error: "Select a programme for this project." };
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("projects")
