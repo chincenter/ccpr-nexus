@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentStaff, isManagement } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
 import { safePercent } from "@/lib/calculations";
+import { ProgrammeEditForm } from "./ProgrammeEditForm";
+import { ProjectForm } from "./ProjectForm";
 
 export default async function ProgrammeDetailPage({ params }: PageProps<"/programmes/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
+  const staff = await getCurrentStaff();
 
   const { data: programme } = await supabase
     .from("programmes")
@@ -16,12 +20,15 @@ export default async function ProgrammeDetailPage({ params }: PageProps<"/progra
 
   if (!programme) notFound();
 
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("*, officer:staff!projects_project_officer_id_fkey(full_name)")
-    .eq("programme_id", id)
-    .is("archived_at", null)
-    .order("code");
+  const [{ data: projects }, { data: staffList }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("*, officer:staff!projects_project_officer_id_fkey(full_name)")
+      .eq("programme_id", id)
+      .is("archived_at", null)
+      .order("code"),
+    supabase.from("staff").select("id, full_name").eq("is_active", true).order("full_name"),
+  ]);
 
   const projectIds = (projects ?? []).map((p) => p.id);
   const { data: activities } = projectIds.length
@@ -34,6 +41,9 @@ export default async function ProgrammeDetailPage({ params }: PageProps<"/progra
     list.push(a);
     activitiesByProject.set(a.project_id, list);
   }
+
+  const canEditProgramme = isManagement(staff?.system_role) || (!!staff && programme.lead_staff_id === staff.id);
+  const canCreateProject = isManagement(staff?.system_role) || staff?.system_role === "programme_manager";
 
   return (
     <div className="space-y-6">
@@ -50,8 +60,13 @@ export default async function ProgrammeDetailPage({ params }: PageProps<"/progra
         </p>
       </div>
 
+      {canEditProgramme && <ProgrammeEditForm programme={programme} staff={staffList ?? []} />}
+
       <div>
-        <h2 className="text-base font-semibold text-slate-900">Projects</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Projects</h2>
+          {canCreateProject && <ProjectForm programmeId={programme.id} staff={staffList ?? []} />}
+        </div>
         <div className="mt-3 space-y-2">
           {(projects ?? []).map((project) => {
             const acts = activitiesByProject.get(project.id) ?? [];

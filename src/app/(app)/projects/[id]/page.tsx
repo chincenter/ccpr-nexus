@@ -5,6 +5,15 @@ import { getCurrentStaff, OPERATIONAL_ROLES } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
 import { safePercent, achievementLabel, riskRating } from "@/lib/calculations";
 import { ActivityCard } from "@/components/project/ActivityCard";
+import {
+  NewObjectiveForm,
+  ObjectiveHeader,
+  NewOutcomeForm,
+  OutcomeHeader,
+  NewOutputForm,
+  OutputHeader,
+  NewActivityForm,
+} from "@/components/project/ResultsFrameworkControls";
 import { DocumentUploader } from "@/components/documents/DocumentUploader";
 import { DocumentList } from "@/components/documents/DocumentList";
 
@@ -23,20 +32,29 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
 
   if (!project) notFound();
 
-  const [{ data: objectives }, { data: outcomes }, { data: outputs }, { data: activities }, { data: team }] =
-    await Promise.all([
-      supabase.from("objectives").select("*").eq("project_id", id).is("archived_at", null).order("code"),
-      supabase.from("outcomes").select("*"),
-      supabase.from("outputs").select("*"),
-      supabase
-        .from("activities")
-        .select(
-          "*, responsible:staff!activities_responsible_staff_id_fkey(full_name), location:locations(name)",
-        )
-        .eq("project_id", id)
-        .order("start_date"),
-      supabase.from("project_team").select("staff_id, role_on_project, staff(full_name, job_title)").eq("project_id", id),
-    ]);
+  const [
+    { data: objectives },
+    { data: outcomes },
+    { data: outputs },
+    { data: activities },
+    { data: team },
+    { data: staffList },
+    { data: locations },
+  ] = await Promise.all([
+    supabase.from("objectives").select("*").eq("project_id", id).is("archived_at", null).order("code"),
+    supabase.from("outcomes").select("*").is("archived_at", null),
+    supabase.from("outputs").select("*").is("archived_at", null),
+    supabase
+      .from("activities")
+      .select(
+        "*, responsible:staff!activities_responsible_staff_id_fkey(full_name), location:locations(name)",
+      )
+      .eq("project_id", id)
+      .order("start_date"),
+    supabase.from("project_team").select("staff_id, role_on_project, staff(full_name, job_title)").eq("project_id", id),
+    supabase.from("staff").select("id, full_name").eq("is_active", true).order("full_name"),
+    supabase.from("locations").select("id, name").is("archived_at", null).order("name"),
+  ]);
 
   const [{ data: projectLocations }, { data: risks }, { data: documents }] = await Promise.all([
     supabase.from("project_locations").select("location:locations(id, name, location_type)").eq("project_id", id),
@@ -86,6 +104,24 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
     tasksByActivity.set(t.activity_id, list);
   }
 
+  const taskIds = (tasks ?? []).map((t) => t.id);
+  const taskDocumentsQuery = await (taskIds.length
+    ? supabase
+        .from("documents")
+        .select("*, uploader:staff!documents_created_by_fkey(full_name)")
+        .eq("entity_type", "task")
+        .in("entity_id", taskIds)
+        .is("archived_at", null)
+    : Promise.resolve({ data: null, error: null }));
+  const taskDocuments = taskDocumentsQuery.data;
+
+  const documentsByTask = new Map<string, NonNullable<typeof taskDocuments>>();
+  for (const d of taskDocuments ?? []) {
+    const list = documentsByTask.get(d.entity_id) ?? [];
+    list.push(d);
+    documentsByTask.set(d.entity_id, list);
+  }
+
   const canEdit = !!staff && (OPERATIONAL_ROLES as readonly string[]).includes(staff.system_role);
 
   const category = (project.programme as { category: string } | null)?.category;
@@ -122,7 +158,10 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       </div>
 
       <div>
-        <h2 className="text-base font-semibold text-slate-900">Results & Activities</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Results & Activities</h2>
+          {canEdit && <NewObjectiveForm projectId={project.id} />}
+        </div>
         <p className="text-sm text-slate-500">
           Objective → Outcome → Output → Activity → Task. Expand an activity to update its status,
           record progress, or archive it.
@@ -133,22 +172,19 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
             const objOutcomes = relevantOutcomes.filter((o) => o.objective_id === objective.id);
             return (
               <div key={objective.id} className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Objective</p>
-                <p className="font-medium text-slate-900">{objective.name}</p>
+                <ObjectiveHeader objective={objective} projectId={project.id} canEdit={canEdit} />
 
                 {objOutcomes.map((outcome) => {
                   const outOutputs = relevantOutputs.filter((o) => o.outcome_id === outcome.id);
                   return (
                     <div key={outcome.id} className="mt-3 border-t border-slate-200 pt-3">
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Outcome</p>
-                      <p className="text-sm font-medium text-slate-800">{outcome.name}</p>
+                      <OutcomeHeader outcome={outcome} projectId={project.id} canEdit={canEdit} />
 
                       {outOutputs.map((output) => {
                         const outputActivities = activityList.filter((a) => a.output_id === output.id);
                         return (
                           <div key={output.id} className="mt-3 pl-3">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Output</p>
-                            <p className="text-sm text-slate-700">{output.name}</p>
+                            <OutputHeader output={output} projectId={project.id} canEdit={canEdit} />
 
                             <div className="mt-2 space-y-2">
                               {outputActivities.map((activity) => (
@@ -156,7 +192,10 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
                                   key={activity.id}
                                   activity={activity}
                                   tasks={tasksByActivity.get(activity.id) ?? []}
+                                  documentsByTask={documentsByTask}
                                   projectId={project.id}
+                                  staff={staffList ?? []}
+                                  locations={locations ?? []}
                                   canEdit={canEdit}
                                   isArchived={!!activity.archived_at}
                                 />
@@ -165,12 +204,35 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
                                 <p className="text-sm text-slate-400">No activities recorded for this output yet.</p>
                               )}
                             </div>
+
+                            {canEdit && (
+                              <div className="mt-2">
+                                <NewActivityForm
+                                  projectId={project.id}
+                                  outputId={output.id}
+                                  staff={staffList ?? []}
+                                  locations={locations ?? []}
+                                />
+                              </div>
+                            )}
                           </div>
                         );
                       })}
+
+                      {canEdit && (
+                        <div className="mt-3 pl-3">
+                          <NewOutputForm outcomeId={outcome.id} projectId={project.id} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
+
+                {canEdit && (
+                  <div className="mt-3 border-t border-slate-200 pt-3">
+                    <NewOutcomeForm objectiveId={objective.id} projectId={project.id} />
+                  </div>
+                )}
               </div>
             );
           })}
