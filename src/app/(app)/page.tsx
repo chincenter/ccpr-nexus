@@ -43,7 +43,9 @@ export default async function DashboardPage() {
     supabase.from("project_locations").select("location_id"),
     supabase
       .from("budgets")
-      .select("id, project_id, approved_budget, budget_lines(expenditures(amount))")
+      .select(
+        "id, project_id, approved_budget, budget_lines(archived_at, expenditures(amount, archived_at), commitments(amount, archived_at))",
+      )
       .is("archived_at", null),
     supabase.from("indicators").select("actual, target, verification_status").is("archived_at", null),
     getManagementAlerts(supabase),
@@ -80,13 +82,24 @@ export default async function DashboardPage() {
       : null,
   };
 
-  const budgetByProject = new Map<string, { approved: number; expenditure: number }>();
+  const budgetByProject = new Map<string, { approved: number; expenditure: number; committed: number }>();
   for (const b of budgets ?? []) {
-    const lines = (b.budget_lines ?? []) as { expenditures: { amount: number }[] }[];
-    const expenditure = lines.reduce((sum, l) => sum + l.expenditures.reduce((s, e) => s + e.amount, 0), 0);
-    budgetByProject.set(b.project_id, { approved: b.approved_budget, expenditure });
+    const lines = (b.budget_lines ?? []).filter((l) => !l.archived_at);
+    const expenditure = lines.reduce(
+      (sum, l) => sum + l.expenditures.filter((e) => !e.archived_at).reduce((s, e) => s + e.amount, 0),
+      0,
+    );
+    const committed = lines.reduce(
+      (sum, l) => sum + l.commitments.filter((c) => !c.archived_at).reduce((s, c) => s + c.amount, 0),
+      0,
+    );
+    budgetByProject.set(b.project_id, { approved: b.approved_budget, expenditure, committed });
   }
   const totalExpenditure = [...budgetByProject.values()].reduce((sum, b) => sum + b.expenditure, 0);
+  const totalCommitted = [...budgetByProject.values()].reduce((sum, b) => sum + b.committed, 0);
+  const financeApprovedTotal = [...budgetByProject.values()].reduce((sum, b) => sum + b.approved, 0);
+  const financeAvailable = financeApprovedTotal - totalExpenditure - totalCommitted;
+  const financeUtilization = budgetUtilization(totalExpenditure, financeApprovedTotal);
 
   const projectsByProgramme = new Map<string, typeof projectList>();
   for (const project of projectList) {
@@ -127,6 +140,12 @@ export default async function DashboardPage() {
         <Kpi label="Approved Budget" value={`$${approvedBudget.toLocaleString()}`} />
         <Kpi label="Total Expenditure" value={`$${totalExpenditure.toLocaleString()}`} />
         <Kpi label="Overall Progress" value={overallProgress != null ? `${overallProgress}%` : "—"} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <Kpi label="Committed" value={`$${totalCommitted.toLocaleString()}`} />
+        <Kpi label="Available Balance" value={`$${financeAvailable.toLocaleString()}`} />
+        <Kpi label="Budget Utilization" value={financeUtilization != null ? `${financeUtilization}%` : "—"} />
       </div>
 
       <div className="grid grid-cols-3 gap-4">

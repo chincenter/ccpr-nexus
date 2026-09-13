@@ -3,7 +3,15 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff, isManagement, OPERATIONAL_ROLES } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
-import { safePercent, indicatorStatus, riskRating } from "@/lib/calculations";
+import {
+  safePercent,
+  indicatorStatus,
+  riskRating,
+  budgetUtilization,
+  budgetRemaining,
+  utilizationSeverity,
+  formatMoney,
+} from "@/lib/calculations";
 import { IndicatorForm } from "@/app/(app)/me-meal/IndicatorForm";
 import { IndicatorCard } from "@/app/(app)/me-meal/IndicatorCard";
 import { ActivityCard } from "@/components/project/ActivityCard";
@@ -187,6 +195,32 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
   const activeActivities = activityList.filter((a) => !a.archived_at);
   const completed = activeActivities.filter((a) => a.status === "completed").length;
   const progress = safePercent(completed, activeActivities.length);
+
+  const { data: budget } = await supabase
+    .from("budgets")
+    .select("*, budget_lines(*, expenditures(*), commitments(*))")
+    .eq("project_id", id)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  const activeBudgetLines = (budget?.budget_lines ?? []).filter((l) => !l.archived_at);
+  const financeExpenditure = activeBudgetLines.reduce(
+    (sum, l) => sum + l.expenditures.filter((e) => !e.archived_at).reduce((s, e) => s + e.amount, 0),
+    0,
+  );
+  const financeCommitted = activeBudgetLines.reduce(
+    (sum, l) => sum + l.commitments.filter((c) => !c.archived_at).reduce((s, c) => s + c.amount, 0),
+    0,
+  );
+  const financeApproved = budget?.approved_budget ?? 0;
+  const financeAvailable = budget ? budgetRemaining(financeApproved, financeExpenditure, financeCommitted) : 0;
+  const financeUtilization = budget ? budgetUtilization(financeExpenditure, financeApproved) : null;
+  const financeSeverity = utilizationSeverity(financeUtilization);
+  const financeCurrency = budget?.currency ?? "USD";
+  const recentExpenditure = activeBudgetLines
+    .flatMap((l) => l.expenditures.filter((e) => !e.archived_at).map((e) => ({ ...e, lineName: l.line_name })))
+    .sort((a, b) => b.expense_date.localeCompare(a.expense_date))
+    .slice(0, 5);
 
   const activityIds = activityList.map((a) => a.id);
   const { data: tasks } = activityIds.length
@@ -522,9 +556,59 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
             Open budget →
           </Link>
         </div>
-        <p className="mt-1 text-sm text-slate-500">
-          Budget, expenditure, and commitments for this project — visible to Finance and management.
-        </p>
+        {budget ? (
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <FinanceStat label="Approved Budget" value={formatMoney(financeApproved, financeCurrency)} />
+              <FinanceStat label="Expenditure" value={formatMoney(financeExpenditure, financeCurrency)} />
+              <FinanceStat label="Committed" value={formatMoney(financeCommitted, financeCurrency)} />
+              <FinanceStat label="Available" value={formatMoney(financeAvailable, financeCurrency)} />
+              <FinanceStat
+                label="Utilization"
+                value={financeUtilization != null ? `${financeUtilization}%` : "—"}
+                tone={financeSeverity}
+              />
+            </div>
+            {progress != null && financeUtilization != null && (
+              <p className="mt-2 text-xs text-slate-500">
+                Project progress {progress}% vs. budget utilization {financeUtilization}% — a simple management
+                indicator, not a financial accounting variance.
+              </p>
+            )}
+            {activeBudgetLines.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Budget Lines</p>
+                <ul className="mt-1 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+                  {activeBudgetLines.map((line) => (
+                    <li key={line.id} className="flex justify-between px-4 py-2 text-sm">
+                      <span className="text-slate-800">{line.line_name}</span>
+                      <span className="text-slate-600">{formatMoney(line.amount, financeCurrency)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {recentExpenditure.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Recent Expenditure</p>
+                <ul className="mt-1 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+                  {recentExpenditure.map((e) => (
+                    <li key={e.id} className="flex justify-between px-4 py-2 text-sm">
+                      <span className="text-slate-800">
+                        {e.description ?? e.lineName} <span className="text-xs text-slate-400">({e.expense_date})</span>
+                      </span>
+                      <span className="text-slate-600">{formatMoney(e.amount, financeCurrency)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="mt-1 text-sm text-slate-500">
+            No budget recorded yet for this project — visible to Finance, M&amp;E/MEAL, and management.
+          </p>
+        )}
       </div>
 
       {programmeModule && (
@@ -573,6 +657,20 @@ function MeSummaryStat({ label, value, tone }: { label: string; value: number; t
     <div className={`rounded-lg border p-3 ${toneClasses}`}>
       <p className="text-xs font-medium uppercase tracking-wide">{label}</p>
       <p className="mt-1 text-xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function FinanceStat({ label, value, tone }: { label: string; value: string; tone?: "ok" | "warning" | "critical" }) {
+  const toneClasses = {
+    ok: "border-slate-200 bg-white text-slate-900",
+    warning: "border-amber-200 bg-amber-50 text-amber-700",
+    critical: "border-red-200 bg-red-50 text-red-700",
+  }[tone ?? "ok"];
+  return (
+    <div className={`rounded-lg border p-3 ${toneClasses}`}>
+      <p className="text-xs font-medium uppercase tracking-wide">{label}</p>
+      <p className="mt-1 text-sm font-semibold">{value}</p>
     </div>
   );
 }

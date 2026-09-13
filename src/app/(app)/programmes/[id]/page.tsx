@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff, isManagement } from "@/lib/auth";
 import { StatusBadge, DemoBadge } from "@/components/StatusBadge";
-import { safePercent, indicatorStatus } from "@/lib/calculations";
+import { safePercent, indicatorStatus, budgetUtilization, formatMoney } from "@/lib/calculations";
 import { ProgrammeEditForm } from "./ProgrammeEditForm";
 import { ProjectForm } from "@/components/project/ProjectForm";
 
@@ -65,6 +65,35 @@ export default async function ProgrammeDetailPage({ params }: PageProps<"/progra
     averageAchievement,
   };
 
+  const { data: programmeBudgets } = projectIds.length
+    ? await supabase
+        .from("budgets")
+        .select("currency, approved_budget, budget_lines(archived_at, expenditures(amount, archived_at), commitments(amount, archived_at))")
+        .in("project_id", projectIds)
+        .is("archived_at", null)
+    : { data: [] };
+
+  const financeRows = (programmeBudgets ?? []).map((b) => {
+    const lines = (b.budget_lines ?? []).filter((l) => !l.archived_at);
+    const expenditure = lines.reduce(
+      (sum, l) => sum + l.expenditures.filter((e) => !e.archived_at).reduce((s, e) => s + e.amount, 0),
+      0,
+    );
+    const committed = lines.reduce(
+      (sum, l) => sum + l.commitments.filter((c) => !c.archived_at).reduce((s, c) => s + c.amount, 0),
+      0,
+    );
+    return { currency: b.currency, approved: b.approved_budget, expenditure, committed };
+  });
+  const financeCurrencies = Array.from(new Set(financeRows.map((r) => r.currency)));
+  const financeByCurrency = financeCurrencies.map((currency) => {
+    const rows = financeRows.filter((r) => r.currency === currency);
+    const approved = rows.reduce((sum, r) => sum + r.approved, 0);
+    const expenditure = rows.reduce((sum, r) => sum + r.expenditure, 0);
+    const committed = rows.reduce((sum, r) => sum + r.committed, 0);
+    return { currency, approved, expenditure, committed, utilization: budgetUtilization(expenditure, approved) };
+  });
+
   const canEditProgramme = isManagement(staff?.system_role) || (!!staff && programme.lead_staff_id === staff.id);
   const canCreateProject = isManagement(staff?.system_role) || staff?.system_role === "programme_manager";
 
@@ -113,6 +142,37 @@ export default async function ProgrammeDetailPage({ params }: PageProps<"/progra
           </p>
         )}
       </div>
+
+      {financeByCurrency.length > 0 && (
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Finance Summary</h2>
+          {financeByCurrency.map((f) => (
+            <div key={f.currency} className="mt-3">
+              {financeByCurrency.length > 1 && (
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">{f.currency}</p>
+              )}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Approved Budget</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{formatMoney(f.approved, f.currency)}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Expenditure</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{formatMoney(f.expenditure, f.currency)}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Commitments</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{formatMoney(f.committed, f.currency)}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Utilization</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{f.utilization != null ? `${f.utilization}%` : "—"}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div>
         <div className="flex items-center justify-between">

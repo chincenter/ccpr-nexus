@@ -58,3 +58,22 @@ export function utilizationSeverity(pct: number | null): "ok" | "warning" | "cri
   if (pct >= 80) return "warning";
   return "ok";
 }
+
+/**
+ * Currency-aware money formatting — finance amounts must never be shown
+ * with a hard-coded "$" regardless of the record's actual currency field.
+ * Falls back to a plain "<code> <amount>" if the code isn't a real
+ * ISO 4217 currency Intl recognizes (defensive only, not expected in
+ * practice — currency is a free-text field on the budget).
+ */
+export function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toLocaleString()}`;
+  }
+}
