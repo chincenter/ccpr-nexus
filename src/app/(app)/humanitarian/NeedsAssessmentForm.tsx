@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { createNeedsAssessment } from "./actions";
 
 const PRIORITIES = ["low", "medium", "high", "critical"];
+const ASSESSMENT_TYPES = ["rapid_needs", "household_assessment", "sector_assessment", "post_distribution_monitoring", "other"];
+const ASSESSMENT_TYPE_LABELS: Record<string, string> = {
+  rapid_needs: "Rapid Needs Assessment",
+  household_assessment: "Household Assessment",
+  sector_assessment: "Sector Assessment",
+  post_distribution_monitoring: "Post-Distribution Monitoring",
+  other: "Other",
+};
 
 export function NeedsAssessmentForm({
   projects,
@@ -65,6 +73,14 @@ export function NeedsAssessmentForm({
       <div>
         <label className="block text-xs font-medium text-slate-600">Assessment date</label>
         <input name="assessment_date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-600">Assessment type</label>
+        <select name="assessment_type" defaultValue="rapid_needs" className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+          {ASSESSMENT_TYPES.map((t) => (
+            <option key={t} value={t}>{ASSESSMENT_TYPE_LABELS[t]}</option>
+          ))}
+        </select>
       </div>
       <div>
         <label className="block text-xs font-medium text-slate-600">Population estimate</label>

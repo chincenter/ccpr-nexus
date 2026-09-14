@@ -273,6 +273,43 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
   };
   const programmeModule = category ? PROGRAMME_MODULE[category] : undefined;
 
+  // Humanitarian summary — only fetched for humanitarian projects, so non-humanitarian
+  // Project Workspaces don't pay for queries they'll never render (see spec: avoid
+  // unnecessary database requests).
+  let humanitarianSummary: {
+    householdCount: number;
+    householdsReached: number;
+    beneficiariesReached: number;
+    activeAssessments: number;
+    pendingVerification: number;
+  } | null = null;
+  if (category === "humanitarian") {
+    const [{ data: hhList }, { data: dists }, { data: assess }] = await Promise.all([
+      supabase.from("households").select("id").eq("project_id", id).is("archived_at", null),
+      supabase
+        .from("distributions")
+        .select("status, distribution_items(household_id, beneficiary_id, archived_at)")
+        .eq("project_id", id)
+        .is("archived_at", null),
+      supabase.from("needs_assessments").select("verification_status").eq("project_id", id).is("archived_at", null),
+    ]);
+    const nonCancelled = (dists ?? []).filter((d) => d.status !== "cancelled");
+    const items = nonCancelled.flatMap((d) => d.distribution_items.filter((i) => !i.archived_at));
+    const reachedHouseholds = new Set(items.map((i) => i.household_id).filter((v): v is string => !!v));
+    const { data: reachedBeneficiaries } = reachedHouseholds.size
+      ? await supabase.from("beneficiaries").select("id").in("household_id", Array.from(reachedHouseholds)).is("archived_at", null)
+      : { data: [] };
+    humanitarianSummary = {
+      householdCount: (hhList ?? []).length,
+      householdsReached: reachedHouseholds.size,
+      beneficiariesReached: (reachedBeneficiaries ?? []).length,
+      activeAssessments: (assess ?? []).length,
+      pendingVerification:
+        (assess ?? []).filter((a) => a.verification_status === "submitted" || a.verification_status === "under_review").length +
+        (dists ?? []).filter((d) => d.status === "completed").length,
+    };
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -619,9 +656,26 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
               Open module →
             </Link>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
-            Programme-specific records for this project — see the {programmeModule.label} page.
-          </p>
+          {humanitarianSummary ? (
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <SummaryStat label="Households" value={String(humanitarianSummary.householdCount)} />
+              <SummaryStat label="Households Reached" value={String(humanitarianSummary.householdsReached)} />
+              <SummaryStat
+                label="Beneficiaries Reached"
+                value={
+                  project.target_beneficiaries != null
+                    ? `${humanitarianSummary.beneficiariesReached} / ${project.target_beneficiaries}`
+                    : String(humanitarianSummary.beneficiariesReached)
+                }
+              />
+              <SummaryStat label="Active Assessments" value={String(humanitarianSummary.activeAssessments)} />
+              <SummaryStat label="Pending Verification" value={String(humanitarianSummary.pendingVerification)} />
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-slate-500">
+              Programme-specific records for this project — see the {programmeModule.label} page.
+            </p>
+          )}
         </div>
       )}
 

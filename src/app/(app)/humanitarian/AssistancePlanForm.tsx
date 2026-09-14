@@ -6,7 +6,15 @@ import { createAssistancePlan } from "./actions";
 
 const TYPES = ["food", "nfi", "cash", "shelter", "wash", "protection", "livelihood", "other"];
 
-export function AssistancePlanForm({ projects }: { projects: { id: string; name: string }[] }) {
+export function AssistancePlanForm({
+  projects,
+  locations,
+  staff,
+}: {
+  projects: { id: string; name: string }[];
+  locations: { id: string; name: string }[];
+  staff: { id: string; full_name: string }[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -60,12 +68,38 @@ export function AssistancePlanForm({ projects }: { projects: { id: string; name:
         </select>
       </div>
       <div>
+        <label className="block text-xs font-medium text-slate-600">Location</label>
+        <select name="location_id" className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+          <option value="">Unspecified</option>
+          {locations.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-600">Responsible staff</label>
+        <select name="responsible_staff_id" className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+          <option value="">Unassigned</option>
+          {staff.map((s) => (
+            <option key={s.id} value={s.id}>{s.full_name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
         <label className="block text-xs font-medium text-slate-600">Unit</label>
         <input name="unit" placeholder="e.g. bag, kit, voucher" className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
       </div>
       <div>
         <label className="block text-xs font-medium text-slate-600">Planned quantity</label>
         <input name="planned_quantity" type="number" min={0} step="0.01" className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-600">Target households</label>
+        <input name="target_households" type="number" min={0} className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-600">Target beneficiaries</label>
+        <input name="target_beneficiaries" type="number" min={0} className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
       </div>
       <div>
         <label className="block text-xs font-medium text-slate-600">Start date</label>

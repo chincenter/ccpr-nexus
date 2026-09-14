@@ -131,6 +131,7 @@ export type Database = {
       }
       assistance_plans: {
         Row: {
+          activity_id: string | null
           archived_at: string | null
           assistance_type: Database["public"]["Enums"]["assistance_type"]
           created_at: string
@@ -138,17 +139,22 @@ export type Database = {
           end_date: string | null
           id: string
           is_demo: boolean
+          location_id: string | null
           name: string
           planned_quantity: number | null
           project_id: string
+          responsible_staff_id: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["assistance_plan_status"]
+          target_beneficiaries: number | null
           target_criteria: string | null
+          target_households: number | null
           unit: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          activity_id?: string | null
           archived_at?: string | null
           assistance_type?: Database["public"]["Enums"]["assistance_type"]
           created_at?: string
@@ -156,17 +162,22 @@ export type Database = {
           end_date?: string | null
           id?: string
           is_demo?: boolean
+          location_id?: string | null
           name: string
           planned_quantity?: number | null
           project_id: string
+          responsible_staff_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["assistance_plan_status"]
+          target_beneficiaries?: number | null
           target_criteria?: string | null
+          target_households?: number | null
           unit?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          activity_id?: string | null
           archived_at?: string | null
           assistance_type?: Database["public"]["Enums"]["assistance_type"]
           created_at?: string
@@ -174,17 +185,28 @@ export type Database = {
           end_date?: string | null
           id?: string
           is_demo?: boolean
+          location_id?: string | null
           name?: string
           planned_quantity?: number | null
           project_id?: string
+          responsible_staff_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["assistance_plan_status"]
+          target_beneficiaries?: number | null
           target_criteria?: string | null
+          target_households?: number | null
           unit?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "assistance_plans_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assistance_plans_created_by_fkey"
             columns: ["created_by"]
@@ -193,10 +215,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "assistance_plans_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "assistance_plans_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistance_plans_responsible_staff_id_fkey"
+            columns: ["responsible_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -785,6 +821,7 @@ export type Database = {
       }
       distribution_items: {
         Row: {
+          archived_at: string | null
           beneficiary_id: string | null
           created_at: string
           created_by: string | null
@@ -794,6 +831,7 @@ export type Database = {
           quantity: number
         }
         Insert: {
+          archived_at?: string | null
           beneficiary_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -803,6 +841,7 @@ export type Database = {
           quantity: number
         }
         Update: {
+          archived_at?: string | null
           beneficiary_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -856,6 +895,7 @@ export type Database = {
           location_id: string | null
           notes: string | null
           project_id: string
+          status: Database["public"]["Enums"]["distribution_status"]
           unit: string | null
           updated_at: string
           updated_by: string | null
@@ -873,6 +913,7 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           project_id: string
+          status?: Database["public"]["Enums"]["distribution_status"]
           unit?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -890,6 +931,7 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           project_id?: string
+          status?: Database["public"]["Enums"]["distribution_status"]
           unit?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -2173,6 +2215,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           assessment_date: string
+          assessment_type: Database["public"]["Enums"]["assessment_type"]
           conducted_by: string | null
           created_at: string
           created_by: string | null
@@ -2186,10 +2229,12 @@ export type Database = {
           project_id: string
           updated_at: string
           updated_by: string | null
+          verification_status: Database["public"]["Enums"]["approval_status"]
         }
         Insert: {
           archived_at?: string | null
           assessment_date?: string
+          assessment_type?: Database["public"]["Enums"]["assessment_type"]
           conducted_by?: string | null
           created_at?: string
           created_by?: string | null
@@ -2203,10 +2248,12 @@ export type Database = {
           project_id: string
           updated_at?: string
           updated_by?: string | null
+          verification_status?: Database["public"]["Enums"]["approval_status"]
         }
         Update: {
           archived_at?: string | null
           assessment_date?: string
+          assessment_type?: Database["public"]["Enums"]["assessment_type"]
           conducted_by?: string | null
           created_at?: string
           created_by?: string | null
@@ -2220,6 +2267,7 @@ export type Database = {
           project_id?: string
           updated_at?: string
           updated_by?: string | null
+          verification_status?: Database["public"]["Enums"]["approval_status"]
         }
         Relationships: [
           {
@@ -3256,6 +3304,12 @@ export type Database = {
         | "under_review"
         | "approved"
         | "published"
+      assessment_type:
+        | "rapid_needs"
+        | "household_assessment"
+        | "sector_assessment"
+        | "post_distribution_monitoring"
+        | "other"
       assistance_plan_status: "planned" | "ongoing" | "completed" | "cancelled"
       assistance_type:
         | "food"
@@ -3273,6 +3327,12 @@ export type Database = {
         | "field_duty"
         | "remote"
       case_status: "open" | "in_progress" | "resolved" | "closed"
+      distribution_status:
+        | "planned"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "verified"
       document_access_level: "standard" | "restricted"
       engagement_status: "not_engaged" | "engaged" | "ongoing" | "inactive"
       facility_type:
@@ -3491,6 +3551,13 @@ export const Constants = {
         "approved",
         "published",
       ],
+      assessment_type: [
+        "rapid_needs",
+        "household_assessment",
+        "sector_assessment",
+        "post_distribution_monitoring",
+        "other",
+      ],
       assistance_plan_status: ["planned", "ongoing", "completed", "cancelled"],
       assistance_type: [
         "food",
@@ -3504,6 +3571,13 @@ export const Constants = {
       ],
       attendance_status: ["present", "leave", "absent", "field_duty", "remote"],
       case_status: ["open", "in_progress", "resolved", "closed"],
+      distribution_status: [
+        "planned",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "verified",
+      ],
       document_access_level: ["standard", "restricted"],
       engagement_status: ["not_engaged", "engaged", "ongoing", "inactive"],
       facility_type: [
