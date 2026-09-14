@@ -1,9 +1,13 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/types/database";
 
 export type CurrentStaff = Tables<"staff">;
 
-export async function getCurrentStaff(): Promise<CurrentStaff | null> {
+// React's cache() memoizes per request (per render pass of the RSC tree) and is
+// scoped to the current server request only — it never persists across requests
+// or users, so this does not introduce cross-user leakage or stale global state.
+export const getCurrentStaff = cache(async (): Promise<CurrentStaff | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,7 +21,7 @@ export async function getCurrentStaff(): Promise<CurrentStaff | null> {
     .maybeSingle();
 
   return data;
-}
+});
 
 export const MANAGEMENT_ROLES = ["super_admin", "executive"] as const;
 export const OPERATIONAL_ROLES = [

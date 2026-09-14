@@ -64,14 +64,21 @@ export default async function HumanitarianPage({ searchParams }: PageProps<"/hum
     projectIds.length
       ? supabase.from("households").select("id, project_id").in("project_id", projectIds).is("archived_at", null)
       : Promise.resolve({ data: [] as never[] }),
+    // Only the columns this page actually renders/aggregates — dropping unused
+    // audit-trail columns reduces payload size across every distribution
+    // org-wide, without touching the unique-household/beneficiary counting
+    // logic below (which still needs every distribution_items row to stay correct).
     projectIds.length
       ? supabase
           .from("distributions")
           .select(
-            "*, project:projects(id, name, code), assistance_plan:assistance_plans(name), location:locations(name), distribution_items(household_id, beneficiary_id, quantity, archived_at)",
+            "id, project_id, status, assistance_plan_id, assistance_type, distribution_date, notes, project:projects(id, name, code), location:locations(name), distribution_items(household_id, beneficiary_id, quantity, archived_at)",
           )
           .in("project_id", projectIds)
           .is("archived_at", null)
+          // Filter archived distribution items in the query itself instead of
+          // downloading every historical (archived) item and filtering in JS.
+          .is("distribution_items.archived_at", null)
           .order("distribution_date", { ascending: false })
       : Promise.resolve({ data: [] as never[] }),
   ]);

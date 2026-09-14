@@ -30,23 +30,31 @@ export default async function DashboardPage() {
     { data: programmes },
     { data: projects },
     { data: activities },
-    { data: beneficiaries },
+    { count: beneficiariesCount },
     { data: coveredLocations },
     { data: budgets },
     { data: indicators },
     alerts,
   ] = await Promise.all([
-    supabase.from("programmes").select("*").is("archived_at", null),
-    supabase.from("projects").select("*").is("archived_at", null),
+    // Only the columns this page actually renders/aggregates — not the full row.
+    supabase.from("programmes").select("id, code, name, category, status, lead_staff_id, is_demo").is("archived_at", null),
+    supabase.from("projects").select("id, programme_id, status, budget, target_beneficiaries").is("archived_at", null),
     supabase.from("activities").select("id, project_id, status").is("archived_at", null),
-    supabase.from("beneficiaries").select("id").is("archived_at", null),
+    // Only the count is used on this page — ask Postgres for COUNT instead of downloading every row.
+    supabase.from("beneficiaries").select("*", { count: "exact", head: true }).is("archived_at", null),
     supabase.from("project_locations").select("location_id"),
     supabase
       .from("budgets")
       .select(
         "id, project_id, approved_budget, budget_lines(archived_at, expenditures(amount, archived_at), commitments(amount, archived_at))",
       )
-      .is("archived_at", null),
+      .is("archived_at", null)
+      // Filter out archived budget lines/expenditures/commitments in the query itself
+      // instead of downloading full (including historical/archived) transaction history
+      // and filtering in JS.
+      .is("budget_lines.archived_at", null)
+      .is("budget_lines.expenditures.archived_at", null)
+      .is("budget_lines.commitments.archived_at", null),
     supabase.from("indicators").select("actual, target, verification_status").is("archived_at", null),
     getManagementAlerts(supabase),
   ]);
@@ -58,7 +66,7 @@ export default async function DashboardPage() {
   const activeProgrammes = programmeList.filter((p) => p.status === "active").length;
   const activeProjects = projectList.filter((p) => p.status === "active").length;
   const totalBeneficiaries = projectList.reduce((sum, p) => sum + (p.target_beneficiaries ?? 0), 0);
-  const beneficiariesReached = (beneficiaries ?? []).length;
+  const beneficiariesReached = beneficiariesCount ?? 0;
   const locationsCovered = new Set((coveredLocations ?? []).map((l) => l.location_id)).size;
   const approvedBudget = projectList.reduce((sum, p) => sum + (p.budget ?? 0), 0);
   const completedActivities = activityList.filter((a) => a.status === "completed").length;

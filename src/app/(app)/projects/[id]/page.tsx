@@ -44,18 +44,43 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
 
   if (!project) notFound();
 
+  const category = (project.programme as { category: string } | null)?.category;
+
+  // Category-specific summary queries only depend on the project id/category, not on
+  // anything fetched below — kick them off now so they run concurrently with the rest
+  // of the page's queries instead of waiting behind budget/tasks.
+  const humanitarianSummaryPromise =
+    category === "humanitarian"
+      ? Promise.all([
+          supabase.from("households").select("id").eq("project_id", id).is("archived_at", null),
+          supabase
+            .from("distributions")
+            .select("status, distribution_items(household_id, beneficiary_id, archived_at)")
+            .eq("project_id", id)
+            .is("archived_at", null),
+          supabase.from("needs_assessments").select("verification_status").eq("project_id", id).is("archived_at", null),
+        ])
+      : null;
+
+  const mineActionSummaryPromise =
+    category === "mine_action"
+      ? Promise.all([
+          supabase.from("mine_hazards").select("id, status").eq("project_id", id).is("archived_at", null),
+          supabase.from("mine_surveys").select("hazard_id").eq("project_id", id).is("archived_at", null),
+          supabase.from("mine_responses").select("status").eq("project_id", id).is("archived_at", null),
+          supabase.from("mre_sessions").select("participants_total").eq("project_id", id).is("archived_at", null),
+          supabase.from("victim_assistance").select("id").eq("project_id", id).is("archived_at", null),
+        ])
+      : null;
+
   const [
     { data: objectives },
-    { data: outcomes },
-    { data: outputs },
     { data: activities },
     { data: team },
     { data: staffList },
     { data: locations },
   ] = await Promise.all([
     supabase.from("objectives").select("*").eq("project_id", id).is("archived_at", null).order("code"),
-    supabase.from("outcomes").select("*").is("archived_at", null),
-    supabase.from("outputs").select("*").is("archived_at", null),
     supabase
       .from("activities")
       .select(
@@ -70,6 +95,21 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
     supabase.from("staff").select("id, full_name").eq("is_active", true).order("full_name"),
     supabase.from("locations").select("id, name").is("archived_at", null).order("name"),
   ]);
+
+  // Outcomes/outputs are scoped via the existing Project → Objectives → Outcomes → Outputs
+  // relationship instead of fetching every outcome/output in the organization. This
+  // necessarily runs after objectives (and outcomes before outputs) since each query
+  // needs the parent ids from the previous one — a genuine data dependency, not an
+  // opportunity for parallelization.
+  const objectiveIdsForScope = (objectives ?? []).map((o) => o.id);
+  const { data: outcomes } = objectiveIdsForScope.length
+    ? await supabase.from("outcomes").select("*").in("objective_id", objectiveIdsForScope).is("archived_at", null)
+    : { data: [] };
+
+  const outcomeIdsForScope = (outcomes ?? []).map((o) => o.id);
+  const { data: outputs } = outcomeIdsForScope.length
+    ? await supabase.from("outputs").select("*").in("outcome_id", outcomeIdsForScope).is("archived_at", null)
+    : { data: [] };
 
   const [{ data: projectLocations }, { data: risks }, { data: documents }] = await Promise.all([
     supabase.from("project_locations").select("location:locations(id, name, location_type)").eq("project_id", id),
@@ -86,11 +126,27 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       .is("archived_at", null),
   ]);
 
-  const { data: indicators } = await supabase
-    .from("indicators")
-    .select("*, responsible:staff!indicators_responsible_staff_id_fkey(full_name)")
-    .eq("project_id", id)
-    .is("archived_at", null);
+  // Indicators and the project budget are independent of each other (both only depend
+  // on the project id), so fetch them concurrently instead of one after the other.
+  const [{ data: indicators }, { data: budget }] = await Promise.all([
+    supabase
+      .from("indicators")
+      .select("*, responsible:staff!indicators_responsible_staff_id_fkey(full_name)")
+      .eq("project_id", id)
+      .is("archived_at", null),
+    supabase
+      .from("budgets")
+      .select("*, budget_lines(*, expenditures(*), commitments(*))")
+      .eq("project_id", id)
+      .is("archived_at", null)
+      // Filter archived budget lines/expenditures/commitments in the query itself
+      // instead of downloading a project's full historical transaction list and
+      // filtering it in JS.
+      .is("budget_lines.archived_at", null)
+      .is("budget_lines.expenditures.archived_at", null)
+      .is("budget_lines.commitments.archived_at", null)
+      .maybeSingle(),
+  ]);
 
   const indicatorIds = (indicators ?? []).map((i) => i.id);
   const indicatorMeasurementsQuery = indicatorIds.length
@@ -196,13 +252,6 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
   const completed = activeActivities.filter((a) => a.status === "completed").length;
   const progress = safePercent(completed, activeActivities.length);
 
-  const { data: budget } = await supabase
-    .from("budgets")
-    .select("*, budget_lines(*, expenditures(*), commitments(*))")
-    .eq("project_id", id)
-    .is("archived_at", null)
-    .maybeSingle();
-
   const activeBudgetLines = (budget?.budget_lines ?? []).filter((l) => !l.archived_at);
   const financeExpenditure = activeBudgetLines.reduce(
     (sum, l) => sum + l.expenditures.filter((e) => !e.archived_at).reduce((s, e) => s + e.amount, 0),
@@ -264,7 +313,6 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
 
   const canEdit = !!staff && (OPERATIONAL_ROLES as readonly string[]).includes(staff.system_role);
 
-  const category = (project.programme as { category: string } | null)?.category;
   const PROGRAMME_MODULE: Record<string, { label: string; href: string }> = {
     humanitarian: { label: "Humanitarian", href: `/humanitarian/${project.id}` },
     mine_action: { label: "Landmine / Mine Action", href: `/mine-action?project=${project.id}` },
@@ -275,7 +323,9 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
 
   // Humanitarian summary — only fetched for humanitarian projects, so non-humanitarian
   // Project Workspaces don't pay for queries they'll never render (see spec: avoid
-  // unnecessary database requests).
+  // unnecessary database requests). The queries themselves were already kicked off
+  // above (in parallel with objectives/activities/budget/etc.); we just await the
+  // result here, at the point it's needed.
   let humanitarianSummary: {
     householdCount: number;
     householdsReached: number;
@@ -283,16 +333,8 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
     activeAssessments: number;
     pendingVerification: number;
   } | null = null;
-  if (category === "humanitarian") {
-    const [{ data: hhList }, { data: dists }, { data: assess }] = await Promise.all([
-      supabase.from("households").select("id").eq("project_id", id).is("archived_at", null),
-      supabase
-        .from("distributions")
-        .select("status, distribution_items(household_id, beneficiary_id, archived_at)")
-        .eq("project_id", id)
-        .is("archived_at", null),
-      supabase.from("needs_assessments").select("verification_status").eq("project_id", id).is("archived_at", null),
-    ]);
+  if (category === "humanitarian" && humanitarianSummaryPromise) {
+    const [{ data: hhList }, { data: dists }, { data: assess }] = await humanitarianSummaryPromise;
     const nonCancelled = (dists ?? []).filter((d) => d.status !== "cancelled");
     const items = nonCancelled.flatMap((d) => d.distribution_items.filter((i) => !i.archived_at));
     const reachedHouseholds = new Set(items.map((i) => i.household_id).filter((v): v is string => !!v));
@@ -310,7 +352,8 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
     };
   }
 
-  // Mine Action summary — only fetched for mine-action projects.
+  // Mine Action summary — only fetched for mine-action projects. Query already kicked
+  // off above alongside objectives/activities/budget/etc.
   let mineActionSummary: {
     activeHazards: number;
     surveyCompletion: number | null;
@@ -318,14 +361,9 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
     mreReached: number;
     victimCases: number;
   } | null = null;
-  if (category === "mine_action") {
-    const [{ data: hazardRows }, { data: surveyRows }, { data: responseRows }, { data: mreRows }, { data: victimRows }] = await Promise.all([
-      supabase.from("mine_hazards").select("id, status").eq("project_id", id).is("archived_at", null),
-      supabase.from("mine_surveys").select("hazard_id").eq("project_id", id).is("archived_at", null),
-      supabase.from("mine_responses").select("status").eq("project_id", id).is("archived_at", null),
-      supabase.from("mre_sessions").select("participants_total").eq("project_id", id).is("archived_at", null),
-      supabase.from("victim_assistance").select("id").eq("project_id", id).is("archived_at", null),
-    ]);
+  if (category === "mine_action" && mineActionSummaryPromise) {
+    const [{ data: hazardRows }, { data: surveyRows }, { data: responseRows }, { data: mreRows }, { data: victimRows }] =
+      await mineActionSummaryPromise;
     const activeHazardRows = (hazardRows ?? []).filter((h) => h.status !== "closed");
     const hazardIdsSurveyed = new Set((surveyRows ?? []).map((s) => s.hazard_id).filter(Boolean));
     const surveyed = activeHazardRows.filter((h) => hazardIdsSurveyed.has(h.id)).length;

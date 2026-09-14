@@ -20,9 +20,15 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
     supabase
       .from("budgets")
       .select(
-        "*, project:projects(id, name, code, programme_id), budget_lines(amount, archived_at, expenditures(amount, archived_at), commitments(amount, archived_at))",
+        "id, currency, approved_budget, project:projects(id, name, code, programme_id), budget_lines(amount, archived_at, expenditures(amount, archived_at), commitments(amount, archived_at))",
       )
-      .is("archived_at", null),
+      .is("archived_at", null)
+      // Filter archived budget lines/expenditures/commitments in the query itself —
+      // otherwise every historical (archived) transaction across the whole
+      // organization gets downloaded just to be discarded by the JS filter below.
+      .is("budget_lines.archived_at", null)
+      .is("budget_lines.expenditures.archived_at", null)
+      .is("budget_lines.commitments.archived_at", null),
     supabase.from("programmes").select("id, name").is("archived_at", null).order("name"),
     supabase.from("projects").select("id, name, programme_id").is("archived_at", null).order("name"),
   ]);

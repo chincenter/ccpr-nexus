@@ -37,8 +37,17 @@ export default async function MineActionPage({ searchParams }: PageProps<"/mine-
   const canEdit = !!staff && (OPERATIONAL_ROLES as readonly string[]).includes(role!);
   const canApprove = isManagement(role);
 
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id, name, programme:programmes!inner(category)")
+    .eq("programme.category", "mine_action")
+    .is("archived_at", null)
+    .order("name");
+
+  const projectList = projects ?? [];
+  const mineActionProjectIds = projectList.map((p) => p.id);
+
   const [
-    { data: projects },
     { data: programmes },
     { data: locations },
     { data: hazards },
@@ -48,7 +57,6 @@ export default async function MineActionPage({ searchParams }: PageProps<"/mine-
     { data: responses },
     { data: activities },
   ] = await Promise.all([
-    supabase.from("projects").select("id, name, programme:programmes!inner(category)").eq("programme.category", "mine_action").is("archived_at", null).order("name"),
     supabase.from("programmes").select("id, name").eq("category", "mine_action").is("archived_at", null).order("name"),
     supabase.from("locations").select("id, name").is("archived_at", null).order("name"),
     supabase
@@ -74,10 +82,13 @@ export default async function MineActionPage({ searchParams }: PageProps<"/mine-
       .from("mine_responses")
       .select("*, hazard:mine_hazards(hazard_code, status), project:projects(name)")
       .is("archived_at", null),
-    supabase.from("activities").select("id, name, project_id"),
+    // The MRE-session form's activity dropdown only ever needs activities that
+    // belong to Mine Action projects, not every activity in the entire
+    // organization (Humanitarian, Health, Governance, etc.).
+    mineActionProjectIds.length
+      ? supabase.from("activities").select("id, name, project_id").in("project_id", mineActionProjectIds)
+      : Promise.resolve({ data: [] as { id: string; name: string; project_id: string }[] }),
   ]);
-
-  const projectList = projects ?? [];
   const allHazards = hazards ?? [];
   const activeHazards = allHazards.filter((h) => !h.archived_at);
   const responseList = responses ?? [];
