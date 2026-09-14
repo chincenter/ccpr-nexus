@@ -8,7 +8,21 @@ export function DocumentUploader({
   entityType,
   entityId,
 }: {
-  entityType: "project" | "programme" | "activity" | "task" | "risk" | "indicator" | "needs_assessment" | "distribution";
+  entityType:
+    | "project"
+    | "programme"
+    | "activity"
+    | "task"
+    | "risk"
+    | "indicator"
+    | "needs_assessment"
+    | "distribution"
+    | "mine_hazard"
+    | "mine_survey"
+    | "mine_daily_update"
+    | "mine_response"
+    | "mre_session"
+    | "victim_assistance";
   entityId: string;
 }) {
   const router = useRouter();

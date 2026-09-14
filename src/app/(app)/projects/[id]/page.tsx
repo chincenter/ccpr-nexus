@@ -267,7 +267,7 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
   const category = (project.programme as { category: string } | null)?.category;
   const PROGRAMME_MODULE: Record<string, { label: string; href: string }> = {
     humanitarian: { label: "Humanitarian", href: `/humanitarian/${project.id}` },
-    mine_action: { label: "Landmine / Mine Action", href: "/mine-action" },
+    mine_action: { label: "Landmine / Mine Action", href: `/mine-action?project=${project.id}` },
     health: { label: "Health", href: "/health" },
     governance: { label: "Governance", href: "/governance" },
   };
@@ -307,6 +307,34 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       pendingVerification:
         (assess ?? []).filter((a) => a.verification_status === "submitted" || a.verification_status === "under_review").length +
         (dists ?? []).filter((d) => d.status === "completed").length,
+    };
+  }
+
+  // Mine Action summary — only fetched for mine-action projects.
+  let mineActionSummary: {
+    activeHazards: number;
+    surveyCompletion: number | null;
+    openResponses: number;
+    mreReached: number;
+    victimCases: number;
+  } | null = null;
+  if (category === "mine_action") {
+    const [{ data: hazardRows }, { data: surveyRows }, { data: responseRows }, { data: mreRows }, { data: victimRows }] = await Promise.all([
+      supabase.from("mine_hazards").select("id, status").eq("project_id", id).is("archived_at", null),
+      supabase.from("mine_surveys").select("hazard_id").eq("project_id", id).is("archived_at", null),
+      supabase.from("mine_responses").select("status").eq("project_id", id).is("archived_at", null),
+      supabase.from("mre_sessions").select("participants_total").eq("project_id", id).is("archived_at", null),
+      supabase.from("victim_assistance").select("id").eq("project_id", id).is("archived_at", null),
+    ]);
+    const activeHazardRows = (hazardRows ?? []).filter((h) => h.status !== "closed");
+    const hazardIdsSurveyed = new Set((surveyRows ?? []).map((s) => s.hazard_id).filter(Boolean));
+    const surveyed = activeHazardRows.filter((h) => hazardIdsSurveyed.has(h.id)).length;
+    mineActionSummary = {
+      activeHazards: activeHazardRows.length,
+      surveyCompletion: safePercent(surveyed, activeHazardRows.length),
+      openResponses: (responseRows ?? []).filter((r) => r.status === "planned" || r.status === "in_progress").length,
+      mreReached: (mreRows ?? []).reduce((sum, s) => sum + (s.participants_total ?? 0), 0),
+      victimCases: (victimRows ?? []).length,
     };
   }
 
@@ -670,6 +698,14 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
               />
               <SummaryStat label="Active Assessments" value={String(humanitarianSummary.activeAssessments)} />
               <SummaryStat label="Pending Verification" value={String(humanitarianSummary.pendingVerification)} />
+            </div>
+          ) : mineActionSummary ? (
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <SummaryStat label="Active Hazards" value={String(mineActionSummary.activeHazards)} />
+              <SummaryStat label="Survey Completion" value={mineActionSummary.surveyCompletion != null ? `${mineActionSummary.surveyCompletion}%` : "—"} />
+              <SummaryStat label="Open Responses" value={String(mineActionSummary.openResponses)} />
+              <SummaryStat label="MRE Reached" value={mineActionSummary.mreReached.toLocaleString()} />
+              <SummaryStat label="Victim Assistance" value={String(mineActionSummary.victimCases)} />
             </div>
           ) : (
             <p className="mt-1 text-sm text-slate-500">

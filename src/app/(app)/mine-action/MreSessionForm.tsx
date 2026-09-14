@@ -7,12 +7,15 @@ import { createMreSession } from "./actions";
 export function MreSessionForm({
   projects,
   locations,
+  activities,
 }: {
   projects: { id: string; name: string }[];
   locations: { id: string; name: string }[];
+  activities: { id: string; name: string; project_id: string }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -39,9 +42,21 @@ export function MreSessionForm({
       }}
       className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4"
     >
-      <select name="project_id" required className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+      <select
+        name="project_id"
+        required
+        value={projectId}
+        onChange={(e) => setProjectId(e.target.value)}
+        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+      >
         {projects.map((p) => (
           <option key={p.id} value={p.id}>{p.name}</option>
+        ))}
+      </select>
+      <select name="activity_id" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+        <option value="">Not linked to a specific activity</option>
+        {activities.filter((a) => a.project_id === projectId).map((a) => (
+          <option key={a.id} value={a.id}>{a.name}</option>
         ))}
       </select>
       <select name="location_id" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
@@ -58,7 +73,6 @@ export function MreSessionForm({
       <input name="audience_description" placeholder="Audience" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm lg:col-span-2" />
       <input name="participants_male" type="number" min={0} placeholder="Male participants" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
       <input name="participants_female" type="number" min={0} placeholder="Female participants" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-      <input name="participants_total" type="number" min={0} placeholder="Total participants" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
       <input name="topics" placeholder="Topics covered" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm lg:col-span-3" />
 
       {error && <p className="col-span-full text-sm text-red-600">{error}</p>}

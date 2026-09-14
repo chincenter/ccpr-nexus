@@ -1869,6 +1869,122 @@ export type Database = {
           },
         ]
       }
+      mine_daily_updates: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          hazard_id: string
+          id: string
+          is_demo: boolean
+          location_id: string | null
+          next_step: string | null
+          notes: string | null
+          progress: number | null
+          project_id: string
+          response_id: string | null
+          responsible_staff_id: string | null
+          status_snapshot:
+            | Database["public"]["Enums"]["mine_action_status"]
+            | null
+          summary: string
+          survey_id: string | null
+          update_date: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          hazard_id: string
+          id?: string
+          is_demo?: boolean
+          location_id?: string | null
+          next_step?: string | null
+          notes?: string | null
+          progress?: number | null
+          project_id: string
+          response_id?: string | null
+          responsible_staff_id?: string | null
+          status_snapshot?:
+            | Database["public"]["Enums"]["mine_action_status"]
+            | null
+          summary: string
+          survey_id?: string | null
+          update_date?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          hazard_id?: string
+          id?: string
+          is_demo?: boolean
+          location_id?: string | null
+          next_step?: string | null
+          notes?: string | null
+          progress?: number | null
+          project_id?: string
+          response_id?: string | null
+          responsible_staff_id?: string | null
+          status_snapshot?:
+            | Database["public"]["Enums"]["mine_action_status"]
+            | null
+          summary?: string
+          survey_id?: string | null
+          update_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mine_daily_updates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_daily_updates_hazard_id_fkey"
+            columns: ["hazard_id"]
+            isOneToOne: false
+            referencedRelation: "mine_hazards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_daily_updates_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_daily_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_daily_updates_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "mine_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_daily_updates_responsible_staff_id_fkey"
+            columns: ["responsible_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_daily_updates_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "mine_surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mine_hazard_coordinates: {
         Row: {
           coordinates: unknown
@@ -2022,6 +2138,129 @@ export type Database = {
           },
         ]
       }
+      mine_responses: {
+        Row: {
+          activity_id: string | null
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          hazard_id: string
+          id: string
+          is_demo: boolean
+          location_id: string | null
+          notes: string | null
+          progress: number
+          project_id: string
+          responsible_staff_id: string | null
+          result: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["response_status"]
+          survey_id: string | null
+          target_completion_date: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activity_id?: string | null
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          hazard_id: string
+          id?: string
+          is_demo?: boolean
+          location_id?: string | null
+          notes?: string | null
+          progress?: number
+          project_id: string
+          responsible_staff_id?: string | null
+          result?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["response_status"]
+          survey_id?: string | null
+          target_completion_date?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activity_id?: string | null
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          hazard_id?: string
+          id?: string
+          is_demo?: boolean
+          location_id?: string | null
+          notes?: string | null
+          progress?: number
+          project_id?: string
+          responsible_staff_id?: string | null
+          result?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["response_status"]
+          survey_id?: string | null
+          target_completion_date?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mine_responses_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_responses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_responses_hazard_id_fkey"
+            columns: ["hazard_id"]
+            isOneToOne: false
+            referencedRelation: "mine_hazards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_responses_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_responses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_responses_responsible_staff_id_fkey"
+            columns: ["responsible_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "mine_surveys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_responses_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mine_surveys: {
         Row: {
           archived_at: string | null
@@ -2030,6 +2269,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           findings: string | null
+          hazard_id: string | null
           id: string
           is_demo: boolean
           location_id: string | null
@@ -2039,6 +2279,7 @@ export type Database = {
           survey_type: string | null
           updated_at: string
           updated_by: string | null
+          verification_status: Database["public"]["Enums"]["approval_status"]
         }
         Insert: {
           archived_at?: string | null
@@ -2047,6 +2288,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           findings?: string | null
+          hazard_id?: string | null
           id?: string
           is_demo?: boolean
           location_id?: string | null
@@ -2056,6 +2298,7 @@ export type Database = {
           survey_type?: string | null
           updated_at?: string
           updated_by?: string | null
+          verification_status?: Database["public"]["Enums"]["approval_status"]
         }
         Update: {
           archived_at?: string | null
@@ -2064,6 +2307,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           findings?: string | null
+          hazard_id?: string | null
           id?: string
           is_demo?: boolean
           location_id?: string | null
@@ -2073,6 +2317,7 @@ export type Database = {
           survey_type?: string | null
           updated_at?: string
           updated_by?: string | null
+          verification_status?: Database["public"]["Enums"]["approval_status"]
         }
         Relationships: [
           {
@@ -2087,6 +2332,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mine_surveys_hazard_id_fkey"
+            columns: ["hazard_id"]
+            isOneToOne: false
+            referencedRelation: "mine_hazards"
             referencedColumns: ["id"]
           },
           {
@@ -2114,6 +2366,7 @@ export type Database = {
       }
       mre_sessions: {
         Row: {
+          activity_id: string | null
           archived_at: string | null
           audience_description: string | null
           created_at: string
@@ -2134,6 +2387,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          activity_id?: string | null
           archived_at?: string | null
           audience_description?: string | null
           created_at?: string
@@ -2154,6 +2408,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          activity_id?: string | null
           archived_at?: string | null
           audience_description?: string | null
           created_at?: string
@@ -2174,6 +2429,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "mre_sessions_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "mre_sessions_created_by_fkey"
             columns: ["created_by"]
@@ -3378,6 +3640,13 @@ export type Database = {
         | "research_policy"
         | "other"
       referral_status: "not_referred" | "referred" | "in_progress" | "completed"
+      response_status:
+        | "planned"
+        | "in_progress"
+        | "completed"
+        | "verified"
+        | "closed"
+        | "cancelled"
       risk_category:
         | "operational"
         | "financial"
@@ -3629,6 +3898,14 @@ export const Constants = {
         "other",
       ],
       referral_status: ["not_referred", "referred", "in_progress", "completed"],
+      response_status: [
+        "planned",
+        "in_progress",
+        "completed",
+        "verified",
+        "closed",
+        "cancelled",
+      ],
       risk_category: [
         "operational",
         "financial",

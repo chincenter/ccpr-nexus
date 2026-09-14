@@ -7,12 +7,15 @@ import { createMineSurvey } from "./actions";
 export function MineSurveyForm({
   projects,
   locations,
+  hazards,
 }: {
   projects: { id: string; name: string }[];
   locations: { id: string; name: string }[];
+  hazards: { id: string; hazard_code: string; project_id: string | null }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -23,6 +26,8 @@ export function MineSurveyForm({
       </button>
     );
   }
+
+  const hazardOptions = hazards.filter((h) => h.project_id === projectId);
 
   return (
     <form
@@ -39,9 +44,21 @@ export function MineSurveyForm({
       }}
       className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3"
     >
-      <select name="project_id" required className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+      <select
+        name="project_id"
+        required
+        value={projectId}
+        onChange={(e) => setProjectId(e.target.value)}
+        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+      >
         {projects.map((p) => (
           <option key={p.id} value={p.id}>{p.name}</option>
+        ))}
+      </select>
+      <select name="hazard_id" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+        <option value="">Not linked to a specific hazard</option>
+        {hazardOptions.map((h) => (
+          <option key={h.id} value={h.id}>{h.hazard_code}</option>
         ))}
       </select>
       <select name="location_id" className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">

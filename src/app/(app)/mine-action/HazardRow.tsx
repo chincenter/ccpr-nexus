@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/StatusBadge";
-import { updateHazardStatus, archiveHazard } from "./actions";
+import { updateHazardStatus, updateHazardVerification, archiveHazard } from "./actions";
 import type { Enums, Tables } from "@/lib/types/database";
 
 const STATUSES: Enums<"mine_action_status">[] = ["open", "in_progress", "cleared", "monitoring", "closed"];
@@ -15,16 +16,18 @@ type Hazard = Tables<"mine_hazards"> & {
   mine_hazard_coordinates: Pick<Tables<"mine_hazard_coordinates">, "precise_lat" | "precise_lng"> | null;
 };
 
-export function HazardRow({ hazard, canEdit }: { hazard: Hazard; canEdit: boolean }) {
+export function HazardRow({ hazard, canEdit, canApprove }: { hazard: Hazard; canEdit: boolean; canApprove: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState(hazard.status);
   const precise = hazard.mine_hazard_coordinates;
 
   return (
-    <tr className="align-top hover:bg-slate-50">
+    <tr className={`align-top hover:bg-slate-50 ${hazard.archived_at ? "opacity-50" : ""}`}>
       <td className="px-4 py-3">
-        <p className="font-medium text-slate-900">{hazard.hazard_code}</p>
+        <Link href={`/mine-action/${hazard.id}`} className="font-medium text-teal-800 hover:underline">
+          {hazard.hazard_code}
+        </Link>
         <p className="text-xs text-slate-500">
           {hazard.project?.name ?? hazard.programme?.name} · {hazard.hazard_type} · {hazard.location?.name ?? "No location"}
         </p>
@@ -73,7 +76,27 @@ export function HazardRow({ hazard, canEdit }: { hazard: Hazard; canEdit: boolea
         )}
       </td>
       {canEdit && (
-        <td className="px-4 py-3 text-right">
+        <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+          {hazard.verification_status === "reported" && (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => startTransition(async () => { await updateHazardVerification(hazard.id, "under_verification"); router.refresh(); })}
+              className="text-xs font-medium text-amber-700 hover:underline disabled:opacity-60"
+            >
+              Check
+            </button>
+          )}
+          {canApprove && (hazard.verification_status === "under_verification" || hazard.verification_status === "reported") && (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => startTransition(async () => { await updateHazardVerification(hazard.id, "verified"); router.refresh(); })}
+              className="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-60"
+            >
+              Verify
+            </button>
+          )}
           <button
             type="button"
             disabled={isPending}
